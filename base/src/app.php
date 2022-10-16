@@ -1,22 +1,29 @@
 <?php
 // == | Setup | =======================================================================================================
 
-gRegisterIncludes('COMPONENTS', EMPTY_ARRAY);
-gRegisterIncludes('MODULES', EMPTY_ARRAY);
+const kDisableSpecialComponent = false;
+
+gRegisterIncludes('COMPONENTS', ['site']);
+gRegisterIncludes('MODULES', ['content']);
 gRegisterIncludes('LIBRARIES', array(
-  'rdf'             => 'rdf_parser.php',
-  'safeMySQL'       => 'safemysql.class.php',
-  'smarty'          => 'smarty/Smarty.class.php',
+  'smarty' => 'smarty/Smarty.class.php',
 ));
 
-const kPrettyComps = ['special'];
+const kPrettyComps = EMPTY_ARRAY;
 
-gRegistrySet('app.offline', (file_exists(ROOT_PATH . '/.offline') && !gSuperGlobal('get', 'overrideOffline')));
+gRegistrySet('console.content.siteName', 'BinOC Preview');
+
+// ====================================================================================================================
+
+// == | Global Functions | ============================================================================================
+
+//gContent('test');
+//print(var_export(gRegistryUtils::GetStore(), true)); exit();
 
 // ====================================================================================================================
 
 
 
-// ====================================================================================================================
+
 
 ?>

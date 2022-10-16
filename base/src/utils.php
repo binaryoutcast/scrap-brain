@@ -196,6 +196,7 @@ class gRegistryUtils {
         'path'        => $path,
         'depth'       => count($path ?? EMPTY_ARRAY),
         'debug'       => kDebugMode,
+        'offline'     => file_exists(gBuildPath(ROOT_PATH, '.offline')),
       ),
       'network' => array(
         'scheme'      => self::SuperGlobal('server', 'SCHEME') ?? (self::SuperGlobal('server', 'HTTPS') ? 'https' : 'http'),
@@ -208,6 +209,7 @@ class gRegistryUtils {
         'output' => array(
           'contentType' => ini_get('default_mimetype'),
           'httpHeaders' => EMPTY_ARRAY,
+          'httpStatus'  => 200,
         ),
         'content' => array(
           'skin'          => kDefaultSkinName,
@@ -224,7 +226,7 @@ class gRegistryUtils {
     if (defined('kDebugDomain') && !SAPI_IS_CLI) {
       self::$sStore['app']['debug'] =
         (self::SuperGlobal('server', 'SERVER_NAME', 'localhost') != constant('kDebugDomain') ?? EMPTY_STRING) ?
-        file_exists(gPath(ROOT_PATH, '.debugMode')) :
+        file_exists(gBuildPath(ROOT_PATH, '.debugMode')) :
         !kDebugMode;
     }
 
@@ -254,7 +256,7 @@ class gRegistryUtils {
   /********************************************************************************************************************
   * Get the registry property and return it
   ********************************************************************************************************************/
-  public static function getStore() {
+  public static function GetStore() {
     return self::$sStore;
   }
 
@@ -297,7 +299,7 @@ class gRegistryUtils {
           }
 
           unset($keys[0], $keys[1]);
-          $rv = \Illuminate\Support\Arr::get($rv, gMaybeNull(implode(DOT, $keys)), $aDefault);
+          $rv = \Illuminate\Support\Arr::get($rv, gCheckValue(implode(DOT, $keys)), $aDefault);
           break;
         case 'superglobal':
           if (count($keys) < 3) {
@@ -311,7 +313,7 @@ class gRegistryUtils {
           }
 
           unset($keys[0], $keys[1]);
-          $rv = \Illuminate\Support\Arr::get($rv, gMaybeNull(implode(DOT, $keys)), $aDefault);
+          $rv = \Illuminate\Support\Arr::get($rv, gCheckValue(implode(DOT, $keys)), $aDefault);
           break;
         default:
           if (count($keys) < 2 || str_starts_with($keys[1], UNDERSCORE)) {
@@ -319,7 +321,7 @@ class gRegistryUtils {
           }
 
           unset($keys[0]);
-          $rv = \Illuminate\Support\Arr::get($GLOBALS, gMaybeNull(implode(DOT, $keys)), $aDefault);
+          $rv = \Illuminate\Support\Arr::get($GLOBALS, gCheckValue(implode(DOT, $keys)), $aDefault);
       }
     }
     else {
@@ -337,6 +339,18 @@ class gRegistryUtils {
       gError('Setting values on virtual nodes is not supported.');
     }
 
+    if (gContains($aKey, '[]', -1)) {
+      $aKey = substr($aKey, 0, -2);
+      $value = gRegistry($aKey, EMPTY_ARRAY);
+
+      if (!is_array($value)) {
+        $value = [$value];
+      }
+
+      $value[] = $aValue;
+      $aValue = $value;
+    }
+
     return \Illuminate\Support\Arr::set(self::$sStore, $aKey, $aValue);
   }
 
@@ -352,7 +366,7 @@ class gRegistryUtils {
     // This handles the superglobals
     switch($aNode) {
       case '_CHECK':
-        $rv = gMaybeNull($aKey);
+        $rv = gCheckValue($aKey);
         break;
       case '_GET':
         if (SAPI_IS_CLI && $GLOBALS['argc'] > 1) {
@@ -366,7 +380,7 @@ class gRegistryUtils {
             }
 
             $attr = str_replace('--', EMPTY_STRING, $arg[0]);
-            $val = gMaybeNull(str_replace('"', EMPTY_STRING, $arg[1]));
+            $val = gCheckValue(str_replace('"', EMPTY_STRING, $arg[1]));
 
             if (!$attr && !$val) {
               continue;
@@ -528,16 +542,42 @@ class gConsoleUtils {
   const HTTP_HEADERS = array(
     404                       => 'HTTP/1.1 404 Not Found',
     501                       => 'HTTP/1.1 501 Not Implemented',
-    'text'                    => 'Content-Type: text/plain',
-    'html'                    => 'Content-Type: text/html',
-    'xhtml'                   => 'Content-Type: application/xhtml+xml',
-    'css'                     => 'Content-Type: text/css',
-    'xml'                     => 'Content-Type: text/xml',
-    'json'                    => 'Content-Type: application/json',
-    'bin'                     => 'Content-Type: application/octet-stream',
-    'xpi'                     => 'Content-Type: application/x-xpinstall',
-    '7z'                      => 'Content-Type: application/x-7z-compressed',
-    'xz'                      => 'Content-Type: application/x-xz',
+  );
+
+  const kStatusCodes = array(
+    200       => 'OK',
+    204       => 'No Content',
+    400       => 'Bad Request',
+    401       => 'Unauthorized',
+    402       => 'Payment Required',
+    403       => 'Forbidden',
+    404       => 'Not Found',
+    405       => 'Method Not Allowed',
+    406       => 'Not Acceptable',
+    415       => 'Unsupported Media Type',
+    418       => 'I\'m a teapot',
+    500       => 'Internal Server Error',
+    501       => 'Not Implemented',
+    502       => 'Bad Gateway',
+    503       => 'Service Unavailable',
+  );
+
+  const kMimeTypes = array(
+    'text'    => 'text/plain',
+    'html'    => 'text/html',
+    'rdf'     => 'application/rdf+xml',
+    'xul'     => 'application/vnd.mozilla.xul+xml',
+    'xhtml'   => 'application/xhtml+xml',
+    'xml'     => 'text/xml',
+    'css'     => 'text/css',
+    'js'      => 'application/js',
+    'json'    => 'application/json',
+    'bin'     => 'application/octet-stream',
+    'xpi'     => 'application/x-xpinstall',
+    'jar'     => 'application/java-archive',
+    '7z'      => 'application/x-7z-compressed',
+    'xz'      => 'application/x-xz',
+    'zip'     => 'application/zip',
   );
 
   /**********************************************************************************************************************
@@ -548,24 +588,62 @@ class gConsoleUtils {
   * @dep gError()
   * @param $aHeader    Short name of header
   **********************************************************************************************************************/
-  public static function header($aHeader, $aReplace = true) { 
-    $debugMode = gRegistryUtils::debug();
-    $isErrorPage = in_array($aHeader, [404, 501]);
-
-    if (!array_key_exists($aHeader, self::HTTP_HEADERS)) {
-      gError('Unknown' . SPACE . $aHeader . SPACE . 'header');
-    }
-
-    if ($debugMode && $isErrorPage) {
-      gError(self::HTTP_HEADERS[$aHeader]);
-    }
-
-    if (!headers_sent()) { 
-      header(self::HTTP_HEADERS[$aHeader], $aReplace);
-
-      if ($isErrorPage) {
+  public static function Header(string|int $aHeader, bool $aReplace = true) { 
+    if (is_int($aHeader) && gContains(self::kStatusCodes, $aHeader, 1)) {
+      self::HttpStatusCode($aHeader);
+      
+      if ($aHeader >= 400) {
+        self::SendHeaders();
+        self::Export(gRegistry('console.output.httpStatus'));
         exit();
       }
+    }
+
+    if (gContains(self::kMimeTypes, $aHeader)) {
+      self::ContentType($aHeader);
+    }
+
+    gRegistrySet('console.output.httpHeaders[]', $aHeader);
+  }
+
+  /********************************************************************************************************************
+  * Gets or sets the "default" content type so we don't have to output the header ourselves in most cases.
+  ********************************************************************************************************************/
+  public static function SendHeaders() {
+    $httpStatus = gRegistry('console.output.httpStatus', 200);
+    gRegistrySet('console.output.httpHeaders[]', 'Content-type'. COLON . SPACE . gRegistry('console.output.contentType'));
+    gRegistrySet('console.output.httpHeaders[]', 'HTTP/1.1' . SPACE . $httpStatus . SPACE . self::kStatusCodes[$httpStatus]);
+
+    $headers = gRegistry('console.output.httpHeaders', EMPTY_ARRAY);
+
+    foreach ($headers as $_value) {
+      header(trim($_value), true);
+    }
+  }
+
+  /********************************************************************************************************************
+  * Gets or sets the "default" content type so we don't have to output the header ourselves in most cases.
+  ********************************************************************************************************************/
+  public static function HttpStatusCode(?string $aStatusCode = null) {
+    if (!$aStatusCode) {
+      gRegistry('console.output.httpStatus', 200);
+    }
+
+    if (gContains(self::kStatusCodes, $aStatusCode, 1)) {
+      gRegistrySet('console.output.httpStatus', $aStatusCode);
+    }
+  }
+
+  /********************************************************************************************************************
+  * Gets or sets the "default" content type so we don't have to output the header ourselves in most cases.
+  ********************************************************************************************************************/
+  public static function ContentType(?string $aContentType = null) {
+     if ($aContentType === null) {
+      return gRegistry('console.output.contentType');
+    }
+
+    if (gContains(self::kMimeTypes, $aContentType, 1)) {
+      return gRegistrySet('console.output.contentType', self::kMimeTypes[$aContentType]);
     }
   }
 
@@ -574,7 +652,7 @@ class gConsoleUtils {
   *
   * @param $aURL   URL to redirect to
   **********************************************************************************************************************/
-  public static function redirect($aURL) { header('Location: ' . $aURL, true, 302); exit(); }
+  public static function Redirect($aURL) { header('Location: ' . $aURL, true, 302); exit(); }
 
   /**********************************************************************************************************************
   * Get a subdomain or base domain from a host
@@ -585,16 +663,29 @@ class gConsoleUtils {
   * @param $aReturnSub  Should return subdmain
   * @returns            domain or subdomain
   ***********************************************************************************************************************/
-  public static function getDomain(string $aHost, ?bool $aReturnSub = null) {
+  public static function GetDomain(string $aHost, ?bool $aReturnSub = null) {
     $host = gExplodeStr(DOT, $aHost);
     return implode(DOT, $aReturnSub ? array_slice($host, 0, -2) : array_slice($host, -2, 2));
   }
 
+  /**********************************************************************************************************************
+  * var_export() + exit()
+  **********************************************************************************************************************/
+  public static function Export($aVariable) { print(var_export($aVariable, true)); exit(); }
+
   /******************************************************************************************************************
   * Simply prints output and sends header if not cli and exits
   ******************************************************************************************************************/
-  public static function output(mixed $aContent, $aHeader = null) {
+  public static function Output(mixed $aContent, ?string $aHeader = 'text') {
+    $x1 = (gRegistryUtils::SuperGlobal('get', 'runtime'));
     $content = null;
+
+    if ($x1) {
+      self::ContentType('text');
+      self::SendHeaders();
+      print(json_encode(gRegistryUtils::GetStore(), kJsonFlags['display']));
+      exit();
+    }
 
     if (is_array($aContent)) {
       $title = $aContent['title'] ?? 'Output';
@@ -622,9 +713,8 @@ class gConsoleUtils {
       }
     }
     else {
-      if (!headers_sent()) {
-        self::header($aHeader ?? 'text');
-      }
+      self::ContentType($aHeader);
+      self::SendHeaders();
     }
 
     // Write out the content
@@ -637,9 +727,9 @@ class gConsoleUtils {
   /******************************************************************************************************************
   * Basic Site Content Generation using a Special Template
   ******************************************************************************************************************/
-  public static function content(mixed $aContent, array $aMetadata = EMPTY_ARRAY) {
-    $template = SAPI_IS_CLI ? false : gReadFile(gPath(ROOT_PATH, 'base', 'skin', 'template.xhtml'));
-    $stylesheet = SAPI_IS_CLI ? false : gReadFile(gPath(ROOT_PATH, 'base', 'skin', 'stylesheet.css'));
+  public static function Content(mixed $aContent, array $aMetadata = EMPTY_ARRAY) {
+    $template = SAPI_IS_CLI ? false : gReadFile(gBuildPath(ROOT_PATH, 'base', 'skin', 'template.xhtml'));
+    $stylesheet = SAPI_IS_CLI ? false : gReadFile(gBuildPath(ROOT_PATH, 'base', 'skin', 'stylesheet.css'));
 
     if (!$template) {
       gOutput(['content' => $aContent, 'title' => $aMetadata['title'] ?? 'Output']);
@@ -697,7 +787,7 @@ class gConsoleUtils {
       '{$SITE_SECTION}'     => $sectionName ?? EMPTY_STRING,
       '{$PAGE_TITLE}'       => $isTestCase ? '[Test]' . SPACE . gRegistry('special.testCase') : ($metadata('title') ?? 'Output'),
       '{$PAGE_STATUS}'      => $metadata('statustext') ?? gRegistry('console.content.statustext'),
-      '{$SKIN_PATH}'        => gPath(SLASH, 'base', 'skin'),
+      '{$SKIN_PATH}'        => gBuildPath(SLASH, 'base', 'skin'),
       '{$SOFTWARE_VENDOR}'  => kAppVendor,
       '{$SOFTWARE_NAME}'    => kAppName,
       '{$SOFTWARE_VERSION}' => kAppVersion,
@@ -705,14 +795,14 @@ class gConsoleUtils {
 
     $content = gSubst($template, $substs);
 
-    ob_end_clean();
+    @ob_end_clean();
     gOutput($content, 'html');
   }
 
   /**********************************************************************************************************************
   * Special Component!
   ***********************************************************************************************************************/
-  public static function specialComponent() {
+  public static function SpecialComponent() {
     $spCurrentPath = gRegistry('app.path');
     $spPathCount = gRegistry('app.depth');
 
@@ -720,11 +810,12 @@ class gConsoleUtils {
       gRedirect(SLASH . kSpecialComponent . SLASH);
     }
 
+    gRegistrySet('app.component', kSpecialComponent);
+
     if (gRegistry('constant.disableSpecialComponent')) {
-      gNotFound('The Special Component has been disabled.');
+      gNotFound('The special component has been disabled.');
     }
 
-    gRegistrySet('app.component', kSpecialComponent);
     gRegistrySet('console.content.sectionName', kSpecialComponentName);
 
     // The Special Component never has more than one level below it
@@ -764,8 +855,8 @@ class gConsoleUtils {
         break;
       case 'test':
         $spCase = gRegistry('superglobal.get.case');
-        $spTestsPath = gPath(ROOT_PATH, 'base', 'tests');
-        $spGlobTests = glob(gPath($spTestsPath, WILDCARD . PHP_EXTENSION));
+        $spTestsPath = gBuildPath(ROOT_PATH, 'base', 'tests');
+        $spGlobTests = glob(gBuildPath($spTestsPath, WILDCARD . PHP_EXTENSION));
         $spTests = EMPTY_ARRAY;
 
         foreach ($spGlobTests as $_value) {
@@ -778,7 +869,7 @@ class gConsoleUtils {
           }
 
           gRegistrySet('special.testCase', $spCase);
-          require_once(gPath($spTestsPath, $spCase . PHP_EXTENSION));
+          require_once(gBuildPath($spTestsPath, $spCase . PHP_EXTENSION));
           headers_sent() ? exit() : gError('The operation completed successfully.');
         }
 
@@ -808,16 +899,18 @@ class gConsoleUtils {
         gContent('<h2>nsIVersionComparator</h2>' . $spForm, ['title' => 'Runtime Status']);
         break;
       case 'guid':
-        gContent(gGlobalIdentifer(gRegistry('superglobal.get.vendor'), true), ['title' => 'Globally Unique Identifier (In XPIDL Notation)', 'textbox' => true]);
+        gContent(gGlobalIdentifer(gRegistry('superglobal.get.vendor'), true),
+                 ['title' => 'Globally Unique Identifier (In XPIDL Notation)', 'textbox' => true]);
         break;
       case 'hex':
-        gContent(gHexString(gRegistry('superglobal.get.length', 40)), ['title' => 'Pseudo-Random Hex String', 'textbox' => true]);
+        gContent(gHexString(gRegistry('superglobal.get.length', 40)),
+                 ['title' => 'Pseudo-Random Hex String', 'textbox' => true]);
         break;
       case 'runtime':
-        gContent(gRegistryUtils::getStore(), ['title' => 'Runtime Status']);
+        gContent(gRegistryUtils::GetStore(), ['title' => 'Runtime Status']);
         break;
       case 'system':
-        ini_set('default_mimetype', 'text/html');
+        self::ContentType('html');
         phpinfo(INFO_GENERAL | INFO_CONFIGURATION | INFO_ENVIRONMENT | INFO_VARIABLES);
         break;
       default:
@@ -918,14 +1011,17 @@ function gRegistrySet(...$args) { return gRegistryUtils::set(...$args); }
 
 // --------------------------------------------------------------------------------------------------------------------
 
-function gHeader(...$args) { return gConsoleUtils::header(...$args); }
-function gRedirect(...$args) { return gConsoleUtils::redirect(...$args); }
-function gContent(...$args) { return gConsoleUtils::content(...$args); }
-function gOutput(...$args) { return gConsoleUtils::output(...$args); }
+function gHeader(...$args) { return gConsoleUtils::Header(...$args); }
+function gContentType(...$args) { return gConsoleUtils::ContentType(...$args); }
+function gRedirect(...$args) { return gConsoleUtils::Redirect(...$args); }
+function gContent(...$args) { return gConsoleUtils::Content(...$args); }
+function gOutput(...$args) { return gConsoleUtils::Output(...$args); }
 
 // --------------------------------------------------------------------------------------------------------------------
 
 function gVersionCompare(...$args) { return mozilla\vc\ToolkitVersionComparator::compare(...$args); }
+
+// --------------------------------------------------------------------------------------------------------------------
 
 function gGetArrVal(...$args) { return Illuminate\Support\Arr::get(...$args); }
 function gSetArrVal(...$args) { return Illuminate\Support\Arr::set(...$args); }
@@ -943,18 +1039,28 @@ function gUndotArray(...$args) { return Illuminate\Support\Arr::undot(...$args);
 * @param $aMessage   Error message
 **********************************************************************************************************************/
 function gError(string $aMessage) {
-  gOutput($aMessage);
+  gErrorUtils::report(['code' => E_ALL, 'message' => $aMessage,
+                       'file' => null, 'line' => null,
+                       'trace' => debug_backtrace(2)]);
 }
 
 /**********************************************************************************************************************
 * Sends 404 or prints error message if debug mode
 **********************************************************************************************************************/
 function gNotFound(string $aMessage) {
-  gOutput($aMessage . NEW_LINE . 'Also, 404.');
+  if (gRegistry('app.debug')) {
+    gErrorUtils::report(['code' => E_ALL, 'message' => $aMessage,
+                         'file' => null, 'line' => null,
+                         'trace' => debug_backtrace(2)]);
+  }
+  gHeader(404);
 }
 
-function gMaybeNull($aValue) {
-  return (empty($aValue) || $aValue === 'none' || $aValue === 0) ? null : $aValue;
+/**********************************************************************************************************************
+* Check if a value should be null according to Phoebus-legacy behavior.
+**********************************************************************************************************************/
+function gCheckValue($aValue, $aFallback = null) {
+  return (empty($aValue) || $aValue === 'none') ? $aFallback : $aValue;
 }
 
 /**********************************************************************************************************************
@@ -972,17 +1078,17 @@ function gRegisterIncludes($aConst, $aIncludes) {
   foreach($aIncludes as $_key => $_value) { 
     switch ($aConst) {
       case 'COMPONENTS':
-        $includes[$_value] = gPath(ROOT_PATH, 'components', $_value, 'src', $_value . kFileExt['php']);
+        $includes[$_value] = gBuildPath(ROOT_PATH, 'components', $_value, 'src', $_value . kFileExt['php']);
         break;
       case 'MODULES':
-        $includes[$_value] = gPath(ROOT_PATH, 'modules', $_value . kFileExt['php']);
+        $includes[$_value] = gBuildPath(ROOT_PATH, 'modules', $_value . kFileExt['php']);
         break;
       case 'LIBRARIES':
         if (str_contains($_value, DOT . DOT)) {
           return;
         }
 
-        $includes[$_key] = gPath(ROOT_PATH, 'third_party', $_value);
+        $includes[$_key] = gBuildPath(ROOT_PATH, 'third_party', $_value);
         break;
       default:
         gfError('Unknown include type');
@@ -993,12 +1099,24 @@ function gRegisterIncludes($aConst, $aIncludes) {
 }
 
 /**********************************************************************************************************************
-* Registers Files to be included such as components and modules
+* Loads a component.
 ***********************************************************************************************************************/
-function gLoadComponent() {
-  if (gRegistryUtils::Component(kSpecialComponent) || !gRegistry('constant.components.site')) {
+function gLoadComponent(string $aComponent) {
+  if ($aComponent == kSpecialComponent) {
     gConsoleUtils::SpecialComponent();
   }
+
+  $componentPath = gRegistry('constant.components' . DOT . $aComponent);
+
+  if (!$componentPath) {
+    gNotFound('Unknown component.');
+  }
+
+  if (!file_exists($componentPath)) {
+    gNotFound('Failed to load the' . SPACE . $aComponent . SPACE .'component.');
+  }
+
+  require_once($componentPath);
 }
 
 /**********************************************************************************************************************
@@ -1088,7 +1206,7 @@ function gExplodePath(string $aPath) {
 /**********************************************************************************************************************
 * Builds and Normalizes Paths
 ***********************************************************************************************************************/
-function gPath(...$aParts) {
+function gBuildPath(...$aParts) {
   $parts = EMPTY_ARRAY;
   $path = strtr(implode(SLASH, $aParts), '\\', SLASH);
   $prefix = EMPTY_STRING;
@@ -1133,7 +1251,7 @@ function gStripStr (string $aStr, string $aStrip = EMPTY_STRING) {
 ***********************************************************************************************************************/
 function gReadFile(string $aFile) {
   $rv = @file_get_contents($aFile);
-  return gMaybeNull($rv);
+  return gCheckValue($rv);
 }
 
 /**********************************************************************************************************************
@@ -1306,6 +1424,9 @@ function gGlobalIdentifer(?string $aVendor = null, ?bool $aXPCOM = null) {
         // Since this isn't a known busted vendor node then we should generate it ourselves.
         // This matches the fixed version of GUIDGenX 1.1 which is to md5 hash the vendor string then
         // split it in half and XOR the two parts for the final value
+
+        // XXXTobin: A future update could do a sha256 by halving it and again then XORing the two sets
+        // and XORing the final two results.
         $vendor = hash('md5', $aVendor);
         $bytes .= hex2bin(substr($vendor, 0, 16)) ^ hex2bin(substr($vendor, 16, 32));
     }
@@ -1766,19 +1887,27 @@ class Arr {
 
 namespace { // == | Bootstrap | =======================================================================================
 
-// If the uri is /special/ then don't even bother loading the rest of the code
-// We can also specify to always default to the special component
-if ((gRegistryUtils::Component('site') && gRegistry('app.path.0') == kSpecialComponent) ||
-    gRegistry('constant.appIsSpecialComponent')) {
-  gRegistrySet('app.component', kSpecialComponent);
-  gLoadComponent();
+// We want the ability for the entry point to specify that the application effectively IS the special component
+if (gRegistry('constant.appIsSpecialComponent')) {
+  gLoadComponent(kSpecialComponent);
 }
 
-// If this is going to be apart of a larger application then why not detect and load it up. Else, we will continue
-// back to the script that included us where we will need to handle some form of output if there is any.
-if (file_exists(gPath(ROOT_PATH, 'base', 'src', 'app.php'))) {
-  require_once(gPath(ROOT_PATH, 'base', 'src', 'app.php'));
-  gError('PC LOAD LETTER');
+// If this is going to be apart of a larger application then why not detect and load it up and also provide the component
+// loading. Execution from app.php will not eventually return to the entry point. It will end here one way or another.
+// Otherwise, we will continue back to the script that included us where we will need to handle
+// some form of output if there is any.
+if (file_exists(gBuildPath(ROOT_PATH, 'base', 'src', 'app.php'))) {
+  require_once(gBuildPath(ROOT_PATH, 'base', 'src', 'app.php'));
+
+  if (gRegistry('app.path.0') == kSpecialComponent) {
+    gRegistrySet('app.component', kSpecialComponent);
+  }
+
+  gLoadComponent(gRegistry('app.component'));
+
+  // This totally useless but fuckin amazing error message will only be displayed when a component doesn't otherwise
+  // terminate execution and debug is on. Otherwise it will send a 404 and terminate execution.
+  gNotFound('PC LOAD LETTER');
 }
 
 } // ==================================================================================================================
