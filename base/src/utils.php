@@ -60,7 +60,7 @@ const AMP                   = "&";
 const DOLLAR                = "\$";
 const COLON                 = ":";
 const SCOPE_OPERATOR        = COLON . COLON;
-const RESOLUTION_OPERATOR   = '->';
+const RESOLUTION_OPERATOR   = DASH . '>';
 const DOTDOT                = DOT . DOT;
 const DASH_SEPARATOR        = SPACE . DASH . SPACE;
 const SCHEME_SUFFIX         = COLON . SLASH . SLASH;
@@ -207,9 +207,9 @@ class gRegistryUtils {
       ),
       'console' => array(
         'output' => array(
-          'contentType' => ini_get('default_mimetype'),
+          'contentType' => 'text/plain',
+          'responseCode'  => 200,
           'httpHeaders' => EMPTY_ARRAY,
-          'httpStatus'  => 200,
         ),
         'content' => array(
           'skin'          => kDefaultSkinName,
@@ -237,7 +237,7 @@ class gRegistryUtils {
   * Get the registry property and return it
   ********************************************************************************************************************/
   public static function Component(?string $aCompareComponent = null) {
-    $rv = (self::$sInited) ? self::get('app.component') : self::SuperGlobal('get', 'component', 'site');
+    $rv = (self::$sInited) ? self::GetRegistryValue('app.component') : self::SuperGlobal('get', 'component', 'site');
 
     if ($aCompareComponent) {
       $rv = ($rv === $aCompareComponent);
@@ -250,7 +250,7 @@ class gRegistryUtils {
   * Get the registry property and return it
   ********************************************************************************************************************/
   public static function debug() {
-    return (self::$sInited) ? self::get('app.debug') : kDebugMode;
+    return (self::$sInited) ? self::GetRegistryValue('app.debug') : kDebugMode;
   }
 
   /********************************************************************************************************************
@@ -263,7 +263,7 @@ class gRegistryUtils {
   /********************************************************************************************************************
   * Get the value of a dotted key from the registry property except for virtual regnodes
   ********************************************************************************************************************/
-  public static function get(string $aKey, $aDefault = null) {
+  public static function GetRegistryValue(string $aKey, $aDefault = null) {
     if ($aKey == EMPTY_STRING) {
       return null;
     }
@@ -334,7 +334,7 @@ class gRegistryUtils {
   /********************************************************************************************************************
   * Set the value of a dotted key from the registry property
   ********************************************************************************************************************/
-  public static function set(string $aKey, string|int|bool|array|null $aValue) {
+  public static function SetRegistryValue(string $aKey, string|int|bool|array|null $aValue) {
     if (in_array(gExplodeStr(DOT, $aKey)[0] ?? EMPTY_STRING, self::$sRemap)) {
       gError('Setting values on virtual nodes is not supported.');
     }
@@ -588,31 +588,40 @@ class gConsoleUtils {
   * @dep gError()
   * @param $aHeader    Short name of header
   **********************************************************************************************************************/
-  public static function Header(string|int $aHeader, bool $aReplace = true) { 
+  public static function Header(string|int $aHeader, bool $aSendAllOnContentType = false) { 
     if (is_int($aHeader) && gContains(self::kStatusCodes, $aHeader, 1)) {
       self::HttpStatusCode($aHeader);
       
-      if ($aHeader >= 400) {
+      if ($aHeader < 400) {
+        return true;
+      }
+      else {
         self::SendHeaders();
-        self::Export(gRegistry('console.output.httpStatus'));
         exit();
       }
     }
 
-    if (gContains(self::kMimeTypes, $aHeader)) {
+    if (gContains(self::kMimeTypes, $aHeader, 1)) {
       self::ContentType($aHeader);
+
+      if ($aSendAllOnContentType) {
+        return self::SendHeaders();
+      }
+      else {
+        return true;
+      }
     }
 
-    gRegistrySet('console.output.httpHeaders[]', $aHeader);
+    return gRegistrySet('console.output.httpHeaders[]', $aHeader);
   }
 
   /********************************************************************************************************************
   * Gets or sets the "default" content type so we don't have to output the header ourselves in most cases.
   ********************************************************************************************************************/
   public static function SendHeaders() {
-    $httpStatus = gRegistry('console.output.httpStatus', 200);
+    $responseCode = gRegistry('console.output.responseCode', 200);
     gRegistrySet('console.output.httpHeaders[]', 'Content-type'. COLON . SPACE . gRegistry('console.output.contentType'));
-    gRegistrySet('console.output.httpHeaders[]', 'HTTP/1.1' . SPACE . $httpStatus . SPACE . self::kStatusCodes[$httpStatus]);
+    gRegistrySet('console.output.httpHeaders[]', 'HTTP/1.1' . SPACE . $responseCode . SPACE . self::kStatusCodes[$responseCode]);
 
     $headers = gRegistry('console.output.httpHeaders', EMPTY_ARRAY);
 
@@ -626,11 +635,11 @@ class gConsoleUtils {
   ********************************************************************************************************************/
   public static function HttpStatusCode(?string $aStatusCode = null) {
     if (!$aStatusCode) {
-      gRegistry('console.output.httpStatus', 200);
+      gRegistry('console.output.responseCode', 200);
     }
 
     if (gContains(self::kStatusCodes, $aStatusCode, 1)) {
-      gRegistrySet('console.output.httpStatus', $aStatusCode);
+      gRegistrySet('console.output.responseCode', $aStatusCode);
     }
   }
 
@@ -681,8 +690,7 @@ class gConsoleUtils {
     $content = null;
 
     if ($x1) {
-      self::ContentType('text');
-      self::SendHeaders();
+      self::Header('text', true);
       print(json_encode(gRegistryUtils::GetStore(), kJsonFlags['display']));
       exit();
     }
@@ -782,6 +790,7 @@ class gConsoleUtils {
     $substs = array(
       '{$SITE_STYLESHEET}'  => $stylesheet ?? EMPTY_STRING,
       '{$PAGE_CONTENT}'     => $content,
+      '{$SITE_DOMAIN}'      => gRegistryUtils::SuperGlobal('server', 'SERVER_NAME'),
       '{$SITE_NAME}'        => $siteName,
       '{$SITE_MENU}'        => $menuize(gRegistry('console.content.commandbar')),
       '{$SITE_SECTION}'     => $sectionName ?? EMPTY_STRING,
@@ -838,7 +847,6 @@ class gConsoleUtils {
       '/special/vc/'              => 'Version Compare',
       '/special/guid/'            => 'GUID',
       '/special/hex/'             => 'Hex String',
-      '/special/runtime/'         => 'Runtime Status',
     );
 
     gRegistrySet('console.content.commandbar', gRegistry('constant.components.site') ?
@@ -854,6 +862,9 @@ class gConsoleUtils {
         gContent($spContent, ['title' => 'Overview']);
         break;
       case 'test':
+        if (!gRegistryUtils::Debug()) {
+          gNotFound('This special function is not available when not in debug mode.');
+        }
         $spCase = gRegistry('superglobal.get.case');
         $spTestsPath = gBuildPath(ROOT_PATH, 'base', 'tests');
         $spGlobTests = glob(gBuildPath($spTestsPath, WILDCARD . PHP_EXTENSION));
@@ -906,11 +917,11 @@ class gConsoleUtils {
         gContent(gHexString(gRegistry('superglobal.get.length', 40)),
                  ['title' => 'Pseudo-Random Hex String', 'textbox' => true]);
         break;
-      case 'runtime':
-        gContent(gRegistryUtils::GetStore(), ['title' => 'Runtime Status']);
-        break;
       case 'system':
-        self::ContentType('html');
+        if (!gRegistryUtils::Debug()) {
+          gNotFound('This special function is not available when not in debug mode.');
+        }
+        self::Header('html', true);
         phpinfo(INFO_GENERAL | INFO_CONFIGURATION | INFO_ENVIRONMENT | INFO_VARIABLES);
         break;
       default:
@@ -1006,8 +1017,8 @@ gErrorUtils::init();
 
 // --------------------------------------------------------------------------------------------------------------------
 
-function gRegistry(...$args) { return gRegistryUtils::get(...$args); }
-function gRegistrySet(...$args) { return gRegistryUtils::set(...$args); }
+function gRegistry(...$args) { return gRegistryUtils::GetRegistryValue(...$args); }
+function gRegistrySet(...$args) { return gRegistryUtils::SetRegistryValue(...$args); }
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -1048,7 +1059,7 @@ function gError(string $aMessage) {
 * Sends 404 or prints error message if debug mode
 **********************************************************************************************************************/
 function gNotFound(string $aMessage) {
-  if (gRegistry('app.debug')) {
+  if (gRegistryUtils::Debug()) {
     gErrorUtils::report(['code' => E_ALL, 'message' => $aMessage,
                          'file' => null, 'line' => null,
                          'trace' => debug_backtrace(2)]);
