@@ -22,7 +22,7 @@ const kMultiSiteDomains = array(
 
 // == | Main | ========================================================================================================
 
-  if (gGetRegKey'app.path.0') == 'root') {
+  if (gGetRegKey('app.path.0') == 'root') {
     gContent('Homepage');
   }
 
