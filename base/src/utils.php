@@ -46,24 +46,57 @@ const E_EXCEPTION = 65536;
 // --------------------------------------------------------------------------------------------------------------------
 
 // Define basic symbol constants
-const NEW_LINE              = "\n";
-const EMPTY_STRING          = "";
-const EMPTY_ARRAY           = [];
-const SPACE                 = " ";
-const WILDCARD              = "*";
-const SLASH                 = "/";
-const DOT                   = ".";
-const DASH                  = "-";
-const UNDERSCORE            = "_";
-const PIPE                  = "|";
-const AMP                   = "&";
-const DOLLAR                = "\$";
-const COLON                 = ":";
-const SCOPE_OPERATOR        = COLON . COLON;
-const RESOLUTION_OPERATOR   = DASH . '>';
-const DOTDOT                = DOT . DOT;
-const DASH_SEPARATOR        = SPACE . DASH . SPACE;
-const SCHEME_SUFFIX         = COLON . SLASH . SLASH;
+const kNewLine              = "\n";
+const kCR                   = "\r";
+const kLF                   = "\n";
+const kTab                  = "\t";
+const kSpace                = " ";
+const kQuote                = '"';
+const kApostrophe           = "'";
+const kLessThan             = "<";
+const kGreaterThan          = ">";
+const kAmpersand            = "&";
+const kSlash                = "/";
+const kBackSlash            = "\\";
+const kEqual                = "=";
+const kDash                 = "-";
+const kPlus                 = "+";
+const kExclamation          = "!";
+const kSemicolon            = ";";
+const kHashsign             = "#";
+const kAsterisk             = "*";
+const kUnderbar             = "_";
+const kComma                = ",";
+const kLeftParen            = "(";
+const kRightParen           = ")";
+const kLeftBrace            = "{";
+const kRightBrace           = "}";
+const kQuestionMark         = "?";
+const kLeftSquareBracket    = "[";
+const kRightSquareBracket   = "]";
+const kNullCh               = "\0";
+
+const kForwardSlash         = kSlash;
+const kMinus                = kDash;
+
+const kDot                  = ".";
+const kPipe                 = "|";
+const kDollar               = "\$";
+const kColon                = ":";
+
+const kScopeOperator        = kColon . kColon;
+const kResolutionOperator   = kDash . kGreaterThan;
+const kDotDot               = kDot . kDot;
+const kSpaceDashSpace       = kSpace . kDash . kSpace;
+const kColonSlashSlash      = kColon . kSlash . kSlash;
+
+const kEmptyString          = "";
+const kEmptyArray           = [];
+
+const kNegOne               = -1;
+const kZero                 = 0;
+const kPosOne               = 1;
+
 
 // ------------------------------------------------------------------------------------------------------------------
 
@@ -92,33 +125,33 @@ define('kDebugMode', $_GET['debug'] ?? SAPI_IS_CLI);
 
 const kFileWriteFlags      = "w+";
 const kFileExt             = array(
-  'php'                     => DOT . 'php',
-  'ini'                     => DOT . 'ini',
-  'html'                    => DOT . 'html',
-  'xhtml'                   => DOT . 'xhtml',
-  'xml'                     => DOT . 'xml',
-  'rdf'                     => DOT . 'rdf',
-  'json'                    => DOT . 'json',
-  'content'                 => DOT . 'content',
-  'tpl'                     => DOT . 'tpl',
-  'xpinstall'               => DOT . 'xpi',
-  'jar'                     => DOT . 'jar',
-  'winstaller'              => DOT . 'installer' . DOT . 'exe',
-  'winportable'             => DOT . 'portable' . DOT . 'exe',
-  'mar'                     => DOT . 'mar',
-  'mar-bz2'                 => DOT . 'complete' . DOT . 'mar',
-  '7z'                      => DOT . '7z',
-  'zip'                     => DOT . 'zip',
-  'tz'                      => DOT . 'tz',
-  't7z'                     => DOT . 't7z',
-  'tgz'                     => DOT . 'tgz',
-  'tbz'                     => DOT . 'tbz',
-  'txz'                     => DOT . 'txz',
-  'tar-zip'                 => DOT . 'tar' . DOT . 'zip',
-  'tar-7z'                  => DOT . 'tar' . DOT . '7z',
-  'tar-gz'                  => DOT . 'tar' . DOT . 'gz',
-  'tar-bz2'                 => DOT . 'tar' . DOT . 'bz2',
-  'tar-xz'                  => DOT . 'tar' . DOT . 'xz', 
+  'php'                     => kDot . 'php',
+  'ini'                     => kDot . 'ini',
+  'html'                    => kDot . 'html',
+  'xhtml'                   => kDot . 'xhtml',
+  'xml'                     => kDot . 'xml',
+  'rdf'                     => kDot . 'rdf',
+  'json'                    => kDot . 'json',
+  'content'                 => kDot . 'content',
+  'tpl'                     => kDot . 'tpl',
+  'xpinstall'               => kDot . 'xpi',
+  'jar'                     => kDot . 'jar',
+  'winstaller'              => kDot . 'installer' . kDot . 'exe',
+  'winportable'             => kDot . 'portable' . kDot . 'exe',
+  'mar'                     => kDot . 'mar',
+  'mar-bz2'                 => kDot . 'complete' . kDot . 'mar',
+  '7z'                      => kDot . '7z',
+  'zip'                     => kDot . 'zip',
+  'tz'                      => kDot . 'tz',
+  't7z'                     => kDot . 't7z',
+  'tgz'                     => kDot . 'tgz',
+  'tbz'                     => kDot . 'tbz',
+  'txz'                     => kDot . 'txz',
+  'tar-zip'                 => kDot . 'tar' . kDot . 'zip',
+  'tar-7z'                  => kDot . 'tar' . kDot . '7z',
+  'tar-gz'                  => kDot . 'tar' . kDot . 'gz',
+  'tar-bz2'                 => kDot . 'tar' . kDot . 'bz2',
+  'tar-xz'                  => kDot . 'tar' . kDot . 'xz', 
 );
 
 // ------------------------------------------------------------------------------------------------------------------
@@ -172,7 +205,7 @@ $gRuntime = [];
 
 class gRegistryUtils {
   private static $sInited = false;
-  private static $sStore = EMPTY_ARRAY;
+  private static $sStore = kEmptyArray;
   private static $sRemap = ['constant', 'superglobal'];
 
   /********************************************************************************************************************
@@ -184,17 +217,17 @@ class gRegistryUtils {
     }
 
     $domain = function($aHost, $aReturnSub = false) {
-      $host = gExplodeStr(DOT, $aHost);
-      return implode(DOT, $aReturnSub ? array_slice($host, 0, -2) : array_slice($host, -2, 2));
+      $host = gExplodeStr(kDot, $aHost);
+      return implode(kDot, $aReturnSub ? array_slice($host, 0, -2) : array_slice($host, -2, 2));
     };
 
-    $path = gExplodePath(self::SuperGlobal('get', 'path', SLASH));
+    $path = gExplodePath(self::SuperGlobal('get', 'path', kSlash));
 
     self::$sStore = array(
       'app' => array(
         'component'   => self::SuperGlobal('get', 'component', 'site'),
         'path'        => $path,
-        'depth'       => count($path ?? EMPTY_ARRAY),
+        'depth'       => count($path ?? kEmptyArray),
         'debug'       => kDebugMode,
         'offline'     => file_exists(gBuildPath(ROOT_PATH, '.offline')),
       ),
@@ -203,13 +236,13 @@ class gRegistryUtils {
         'baseDomain'  => $domain(self::SuperGlobal('server', 'SERVER_NAME', 'localhost')),
         'subDomain'   => $domain(self::SuperGlobal('server', 'SERVER_NAME', 'localhost'), true),
         'remoteAddr'  => self::SuperGlobal('server', 'HTTP_X_FORWARDED_FOR', self::SuperGlobal('server', 'REMOTE_ADDR', '127.0.0.1')),
-        'userAgent'   => self::SuperGlobal('server', 'HTTP_USER_AGENT', 'php' . DASH . PHP_SAPI . SLASH . PHP_VERSION),
+        'userAgent'   => self::SuperGlobal('server', 'HTTP_USER_AGENT', 'php' . kDash . PHP_SAPI . kSlash . PHP_VERSION),
       ),
       'console' => array(
         'output' => array(
           'contentType' => 'text/plain',
           'responseCode'  => 200,
-          'httpHeaders' => EMPTY_ARRAY,
+          'httpHeaders' => kEmptyArray,
         ),
         'content' => array(
           'skin'          => kDefaultSkinName,
@@ -225,7 +258,7 @@ class gRegistryUtils {
 
     if (defined('kDebugDomain') && !SAPI_IS_CLI) {
       self::$sStore['app']['debug'] =
-        (self::SuperGlobal('server', 'SERVER_NAME', 'localhost') != constant('kDebugDomain') ?? EMPTY_STRING) ?
+        (self::SuperGlobal('server', 'SERVER_NAME', 'localhost') != constant('kDebugDomain') ?? kEmptyString) ?
         file_exists(gBuildPath(ROOT_PATH, '.debugMode')) :
         !kDebugMode;
     }
@@ -264,14 +297,14 @@ class gRegistryUtils {
   * Get the value of a dotted key from the registry property except for virtual regnodes
   ********************************************************************************************************************/
   public static function GetRegistryValue(string $aKey, $aDefault = null) {
-    if ($aKey == EMPTY_STRING) {
+    if ($aKey == kEmptyString) {
       return null;
     }
 
-    $keys = gExplodeStr(DOT, $aKey);
+    $keys = gExplodeStr(kDot, $aKey);
 
-    if (in_array($keys[0] ?? EMPTY_STRING, self::$sRemap)) {
-      switch ($keys[0] ?? EMPTY_STRING) {
+    if (in_array($keys[0] ?? kEmptyString, self::$sRemap)) {
+      switch ($keys[0] ?? kEmptyString) {
         case 'constant':
           if (count($keys) < 2) {
             return null;
@@ -299,7 +332,7 @@ class gRegistryUtils {
           }
 
           unset($keys[0], $keys[1]);
-          $rv = \Illuminate\Support\Arr::get($rv, gCheckValue(implode(DOT, $keys)), $aDefault);
+          $rv = \Illuminate\Support\Arr::get($rv, gCheckValue(implode(kDot, $keys)), $aDefault);
           break;
         case 'superglobal':
           if (count($keys) < 3) {
@@ -313,15 +346,15 @@ class gRegistryUtils {
           }
 
           unset($keys[0], $keys[1]);
-          $rv = \Illuminate\Support\Arr::get($rv, gCheckValue(implode(DOT, $keys)), $aDefault);
+          $rv = \Illuminate\Support\Arr::get($rv, gCheckValue(implode(kDot, $keys)), $aDefault);
           break;
         default:
-          if (count($keys) < 2 || str_starts_with($keys[1], UNDERSCORE)) {
+          if (count($keys) < 2 || str_starts_with($keys[1], kUnderbar)) {
             return null;
           }
 
           unset($keys[0]);
-          $rv = \Illuminate\Support\Arr::get($GLOBALS, gCheckValue(implode(DOT, $keys)), $aDefault);
+          $rv = \Illuminate\Support\Arr::get($GLOBALS, gCheckValue(implode(kDot, $keys)), $aDefault);
       }
     }
     else {
@@ -335,13 +368,13 @@ class gRegistryUtils {
   * Set the value of a dotted key from the registry property
   ********************************************************************************************************************/
   public static function SetRegistryValue(string $aKey, string|int|bool|array|null $aValue) {
-    if (in_array(gExplodeStr(DOT, $aKey)[0] ?? EMPTY_STRING, self::$sRemap)) {
+    if (in_array(gExplodeStr(kDot, $aKey)[0] ?? kEmptyString, self::$sRemap)) {
       gError('Setting values on virtual nodes is not supported.');
     }
 
     if (gContains($aKey, '[]', -1)) {
       $aKey = substr($aKey, 0, -2);
-      $value = gRegistry($aKey, EMPTY_ARRAY);
+      $value = gRegistry($aKey, kEmptyArray);
 
       if (!is_array($value)) {
         $value = [$value];
@@ -361,7 +394,7 @@ class gRegistryUtils {
     $rv = null;
 
     // Turn the variable type into all caps prefixed with an underscore
-    $aNode = UNDERSCORE . strtoupper($aNode);
+    $aNode = kUnderbar . strtoupper($aNode);
 
     // This handles the superglobals
     switch($aNode) {
@@ -379,8 +412,8 @@ class gRegistryUtils {
               continue;
             }
 
-            $attr = str_replace('--', EMPTY_STRING, $arg[0]);
-            $val = gCheckValue(str_replace('"', EMPTY_STRING, $arg[1]));
+            $attr = str_replace('--', kEmptyString, $arg[0]);
+            $val = gCheckValue(str_replace('"', kEmptyString, $arg[1]));
 
             if (!$attr && !$val) {
               continue;
@@ -408,7 +441,7 @@ class gRegistryUtils {
     // We always pass $_GET values through a general regular expression
     // This allows only a-z A-Z 0-9 - / { } @ % whitespace and ,
     if ($rv && $aNode == "_GET") {
-      $rv = preg_replace(REGEX_GET_FILTER, EMPTY_STRING, $rv);
+      $rv = preg_replace(REGEX_GET_FILTER, kEmptyString, $rv);
     }
 
     // Files need special handling.. In principle we hard fail if it is anything other than
@@ -460,8 +493,8 @@ class gErrorUtils {
   * Static Class Public Init/Deinit
   ******************************************************************************************************************/
   public static function init() {
-    set_error_handler(__CLASS__ . SCOPE_OPERATOR . "phpErrorHandler");
-    set_exception_handler(__CLASS__ . SCOPE_OPERATOR . "phpExceptionHandler");
+    set_error_handler(__CLASS__ . kScopeOperator . "phpErrorHandler");
+    set_exception_handler(__CLASS__ . kScopeOperator . "phpExceptionHandler");
   }
 
   public static function uninit() { restore_error_handler(); restore_exception_handler(); }
@@ -470,9 +503,9 @@ class gErrorUtils {
   * Output details about a failure condition
   ******************************************************************************************************************/
   public static function report(array $aMetadata) {
-    $traceline = fn($eFile, $eLine) => str_replace(ROOT_PATH, EMPTY_STRING, $eFile) . COLON . $eLine;
+    $traceline = fn($eFile, $eLine) => str_replace(ROOT_PATH, kEmptyString, $eFile) . kColon . $eLine;
     $functions = ['phpErrorHandler', 'phpExceptionHandler', 'trigger_error'];
-    $trace = ($aMetadata['file'] && $aMetadata['line']) ? [$traceline($aMetadata['file'], $aMetadata['line'])] : EMPTY_ARRAY;
+    $trace = ($aMetadata['file'] && $aMetadata['line']) ? [$traceline($aMetadata['file'], $aMetadata['line'])] : kEmptyArray;
 
     foreach ($aMetadata['trace'] as $_key => $_value) {
       if (in_array($_value['function'], $functions)) {
@@ -489,7 +522,7 @@ class gErrorUtils {
       $content = is_string($content) ?
                  '<h2 style="display: block; border-bottom: 1px solid #d6e5f5; font-weight: bold;">Issue Details</h2>' .
                  '<p>' . $content . '</p>':
-                 EMPTY_STRING;
+                 kEmptyString;
 
       $content .= '<h3>Traceback:</h3><ul>';
 
@@ -506,7 +539,7 @@ class gErrorUtils {
         gRegistrySet('console.content.commandbar', array_merge($commandBar, kDefaultMenu));
       }
 
-      gRegistrySet('console.content.sectionName', EMPTY_STRING);
+      gRegistrySet('console.content.sectionName', kEmptyString);
       gContent($content, ['title' => $title, 'statustext' => 'Please contact a system administrator.']);
     }
 
@@ -565,7 +598,7 @@ class gConsoleUtils {
   const kMimeTypes = array(
     'text'    => 'text/plain',
     'html'    => 'text/html',
-    'rdf'     => 'application/rdf+xml',
+    'rdf'     => 'text/rdf',
     'xul'     => 'application/vnd.mozilla.xul+xml',
     'xhtml'   => 'application/xhtml+xml',
     'xml'     => 'text/xml',
@@ -620,10 +653,10 @@ class gConsoleUtils {
   ********************************************************************************************************************/
   public static function SendHeaders() {
     $responseCode = gRegistry('console.output.responseCode', 200);
-    gRegistrySet('console.output.httpHeaders[]', 'Content-type'. COLON . SPACE . gRegistry('console.output.contentType'));
-    gRegistrySet('console.output.httpHeaders[]', 'HTTP/1.1' . SPACE . $responseCode . SPACE . self::kStatusCodes[$responseCode]);
+    gRegistrySet('console.output.httpHeaders[]', 'Content-type'. kColon . kSpace . gRegistry('console.output.contentType'));
+    gRegistrySet('console.output.httpHeaders[]', 'HTTP/1.1' . kSpace . $responseCode . kSpace . self::kStatusCodes[$responseCode]);
 
-    $headers = gRegistry('console.output.httpHeaders', EMPTY_ARRAY);
+    $headers = gRegistry('console.output.httpHeaders', kEmptyArray);
 
     foreach ($headers as $_value) {
       header(trim($_value), true);
@@ -666,15 +699,15 @@ class gConsoleUtils {
   /**********************************************************************************************************************
   * Get a subdomain or base domain from a host
   *
-  * @dep DOT
+  * @dep kDot
   * @dep gExplodeStr()
   * @param $aHost       Hostname
   * @param $aReturnSub  Should return subdmain
   * @returns            domain or subdomain
   ***********************************************************************************************************************/
   public static function GetDomain(string $aHost, ?bool $aReturnSub = null) {
-    $host = gExplodeStr(DOT, $aHost);
-    return implode(DOT, $aReturnSub ? array_slice($host, 0, -2) : array_slice($host, -2, 2));
+    $host = gExplodeStr(kDot, $aHost);
+    return implode(kDot, $aReturnSub ? array_slice($host, 0, -2) : array_slice($host, -2, 2));
   }
 
   /**********************************************************************************************************************
@@ -697,15 +730,15 @@ class gConsoleUtils {
 
     if (is_array($aContent)) {
       $title = $aContent['title'] ?? 'Output';
-      $content = $aContent['content'] ?? EMPTY_STRING;
+      $content = $aContent['content'] ?? kEmptyString;
 
-      if ($title == 'Output' && $content == EMPTY_STRING) {
+      if ($title == 'Output' && $content == kEmptyString) {
         $content = $aContent ?? $content;
       }
     }
     else {
       $title = 'Output';
-      $content = $aContent ?? EMPTY_STRING;
+      $content = $aContent ?? kEmptyString;
     }
 
     $content = (is_string($content) || is_int($content)) ? $content : json_encode($content, kJsonFlags['display']);
@@ -713,11 +746,11 @@ class gConsoleUtils {
     // Send the header if not cli
     if (SAPI_IS_CLI) {
       if (!CLI_NO_LOGO) {
-        $software = $title . DASH_SEPARATOR . kAppVendor . SPACE . kAppName . SPACE . kAppVersion;
+        $software = $title . kSpaceDashSpace . kAppVendor . kSpace . kAppName . kSpace . kAppVersion;
         $titleLength = 120 - 8 - strlen($software);
         $titleLength = ($titleLength > 0) ? $titleLength : 2;
-        $title = NEW_LINE . '==' . SPACE . PIPE . SPACE . $software . SPACE . PIPE . SPACE . str_repeat('=', $titleLength);
-        $content = $title . NEW_LINE . NEW_LINE . $content . NEW_LINE . NEW_LINE . str_repeat('=', 120) . NEW_LINE;
+        $title = kNewLine . '==' . kSpace . kPipe . kSpace . $software . kSpace . kPipe . kSpace . str_repeat('=', $titleLength);
+        $content = $title . kNewLine . kNewLine . $content . kNewLine . kNewLine . str_repeat('=', 120) . kNewLine;
       }
     }
     else {
@@ -735,7 +768,7 @@ class gConsoleUtils {
   /******************************************************************************************************************
   * Basic Site Content Generation using a Special Template
   ******************************************************************************************************************/
-  public static function Content(mixed $aContent, array $aMetadata = EMPTY_ARRAY) {
+  public static function Content(mixed $aContent, array $aMetadata = kEmptyArray) {
     $template = SAPI_IS_CLI ? false : gReadFile(gBuildPath(ROOT_PATH, 'base', 'skin', 'template.xhtml'));
     $stylesheet = SAPI_IS_CLI ? false : gReadFile(gBuildPath(ROOT_PATH, 'base', 'skin', 'stylesheet.css'));
 
@@ -750,11 +783,11 @@ class gConsoleUtils {
     };
 
     $menuize = function($aMenu) {
-      $rv = EMPTY_STRING;
+      $rv = kEmptyString;
 
       foreach ($aMenu as $_key => $_value) {
         if (gContains($_key, 'onclick=', 1)) {
-          $rv .= '<li><a href="#"' . SPACE . $_key . '>' . $_value . '</a></li>';
+          $rv .= '<li><a href="#"' . kSpace . $_key . '>' . $_value . '</a></li>';
         }
         else {
           $rv .= '<li><a href="' . $_key . '">' . $_value . '</a></li>';
@@ -779,24 +812,24 @@ class gConsoleUtils {
     }
 
     $siteName = gRegistry('console.content.siteName', kAppName);
-    $sectionName = gRegistry('console.content.sectionName', EMPTY_STRING);
+    $sectionName = gRegistry('console.content.sectionName', kEmptyString);
 
     if ($sectionName) {
-      $siteName = $sectionName . DASH_SEPARATOR . $siteName;
+      $siteName = $sectionName . kSpaceDashSpace . $siteName;
     }
 
     $isTestCase = (!$metadata('title') && gRegistry('special.testCase') && gRegistryUtils::Component(kSpecialComponent));
 
     $substs = array(
-      '{$SITE_STYLESHEET}'  => $stylesheet ?? EMPTY_STRING,
+      '{$SITE_STYLESHEET}'  => $stylesheet ?? kEmptyString,
       '{$PAGE_CONTENT}'     => $content,
       '{$SITE_DOMAIN}'      => gRegistryUtils::SuperGlobal('server', 'SERVER_NAME'),
       '{$SITE_NAME}'        => $siteName,
       '{$SITE_MENU}'        => $menuize(gRegistry('console.content.commandbar')),
-      '{$SITE_SECTION}'     => $sectionName ?? EMPTY_STRING,
-      '{$PAGE_TITLE}'       => $isTestCase ? '[Test]' . SPACE . gRegistry('special.testCase') : ($metadata('title') ?? 'Output'),
+      '{$SITE_SECTION}'     => $sectionName ?? kEmptyString,
+      '{$PAGE_TITLE}'       => $isTestCase ? '[Test]' . kSpace . gRegistry('special.testCase') : ($metadata('title') ?? 'Output'),
       '{$PAGE_STATUS}'      => $metadata('statustext') ?? gRegistry('console.content.statustext'),
-      '{$SKIN_PATH}'        => gBuildPath(SLASH, 'base', 'skin'),
+      '{$SKIN_PATH}'        => gBuildPath(kSlash, 'base', 'skin'),
       '{$SOFTWARE_VENDOR}'  => kAppVendor,
       '{$SOFTWARE_NAME}'    => kAppName,
       '{$SOFTWARE_VERSION}' => kAppVersion,
@@ -816,7 +849,7 @@ class gConsoleUtils {
     $spPathCount = gRegistry('app.depth');
 
     if ($spCurrentPath[0] != kSpecialComponent) {
-      gRedirect(SLASH . kSpecialComponent . SLASH);
+      gRedirect(kSlash . kSpecialComponent . kSlash);
     }
 
     gRegistrySet('app.component', kSpecialComponent);
@@ -867,11 +900,11 @@ class gConsoleUtils {
         }
         $spCase = gRegistry('superglobal.get.case');
         $spTestsPath = gBuildPath(ROOT_PATH, 'base', 'tests');
-        $spGlobTests = glob(gBuildPath($spTestsPath, WILDCARD . PHP_EXTENSION));
-        $spTests = EMPTY_ARRAY;
+        $spGlobTests = glob(gBuildPath($spTestsPath, kAsterisk . PHP_EXTENSION));
+        $spTests = kEmptyArray;
 
         foreach ($spGlobTests as $_value) {
-          $spTests[] = gSubst($_value, [PHP_EXTENSION => EMPTY_STRING, $spTestsPath . SLASH => EMPTY_STRING]);
+          $spTests[] = gSubst($_value, [PHP_EXTENSION => kEmptyString, $spTestsPath . kSlash => kEmptyString]);
         }
 
         if ($spCase) {
@@ -884,13 +917,13 @@ class gConsoleUtils {
           headers_sent() ? exit() : gError('The operation completed successfully.');
         }
 
-        $spContent = EMPTY_STRING;
+        $spContent = kEmptyString;
 
         foreach ($spTests as $_value) {
           $spContent .= '<li><a href="/special/test/?case=' . $_value . '">' . $_value . '</a></li>';
         }
 
-        $spContent = ($spContent == EMPTY_STRING) ?
+        $spContent = ($spContent == kEmptyString) ?
                      '<p>There are no test cases.</p>' :
                      '<h2>Please select a test case&hellip;</h2><ul>' . $spContent . '</ul>' . str_repeat('<br />', 3);
 
@@ -955,10 +988,10 @@ class gConsoleUtils {
         // Properly handle content using XML and not try and be lazy.. It almost never works!
         if (array_key_exists('@content', $aData) && is_string($aData['@content'])) {
           if (gContains($aData['@content'], ["<", ">", "?", "&", "'", "\""])) {
-            $content = $dom->createCDATASection($aData['@content'] ?? EMPTY_STRING);
+            $content = $dom->createCDATASection($aData['@content'] ?? kEmptyString);
           }
           else {
-            $content = $dom->createTextNode($aData['@content'] ?? EMPTY_STRING);
+            $content = $dom->createTextNode($aData['@content'] ?? kEmptyString);
           }
 
           $element->appendChild($content);
@@ -1049,7 +1082,11 @@ function gUndotArray(...$args) { return Illuminate\Support\Arr::undot(...$args);
 *
 * @param $aMessage   Error message
 **********************************************************************************************************************/
-function gError(string $aMessage) {
+function gError(?string $aMessage = null) {
+  if (!$aMessage) {
+    $aMessage = 'No further details were provided.';
+  }
+
   gErrorUtils::report(['code' => E_ALL, 'message' => $aMessage,
                        'file' => null, 'line' => null,
                        'trace' => debug_backtrace(2)]);
@@ -1058,7 +1095,11 @@ function gError(string $aMessage) {
 /**********************************************************************************************************************
 * Sends 404 or prints error message if debug mode
 **********************************************************************************************************************/
-function gNotFound(string $aMessage) {
+function gNotFound(?string $aMessage = null) {
+  if (!$aMessage) {
+    $aMessage = 'HTTP/1.1 404 Not Found';
+  }
+
   if (gRegistryUtils::Debug()) {
     gErrorUtils::report(['code' => E_ALL, 'message' => $aMessage,
                          'file' => null, 'line' => null,
@@ -1081,10 +1122,10 @@ function gRegisterIncludes($aConst, $aIncludes) {
   $aConst = strtoupper($aConst);
 
   if (defined($aConst)) {
-    gError($aConst . SPACE . 'files are already registered and may not be updated.');
+    gError($aConst . kSpace . 'files are already registered and may not be updated.');
   }
 
-  $includes = EMPTY_ARRAY;
+  $includes = kEmptyArray;
 
   foreach($aIncludes as $_key => $_value) { 
     switch ($aConst) {
@@ -1095,7 +1136,7 @@ function gRegisterIncludes($aConst, $aIncludes) {
         $includes[$_value] = gBuildPath(ROOT_PATH, 'modules', $_value . kFileExt['php']);
         break;
       case 'LIBRARIES':
-        if (str_contains($_value, DOT . DOT)) {
+        if (str_contains($_value, kDot . kDot)) {
           return;
         }
 
@@ -1117,14 +1158,14 @@ function gLoadComponent(string $aComponent) {
     gConsoleUtils::SpecialComponent();
   }
 
-  $componentPath = gRegistry('constant.components' . DOT . $aComponent);
+  $componentPath = gRegistry('constant.components' . kDot . $aComponent);
 
   if (!$componentPath) {
     gNotFound('Unknown component.');
   }
 
   if (!file_exists($componentPath)) {
-    gNotFound('Failed to load the' . SPACE . $aComponent . SPACE .'component.');
+    gNotFound('Failed to load the' . kSpace . $aComponent . kSpace .'component.');
   }
 
   require_once($componentPath);
@@ -1133,9 +1174,9 @@ function gLoadComponent(string $aComponent) {
 /**********************************************************************************************************************
 * Basic Filter Substitution of a string
 *
-* @dep EMPTY_STRING
-* @dep SLASH
-* @dep SPACE
+* @dep kEmptyString
+* @dep kSlash
+* @dep kSpace
 * @dep gError()
 * @param $aSubsts               multi-dimensional array of keys and values to be replaced
 * @param $aString               string to operate on
@@ -1147,7 +1188,7 @@ function gSubst(string $aString, array $aSubsts, bool $aRegEx = false) {
   $replaceFunction = $aRegEx ? 'preg_replace' : 'str_replace';
 
   foreach ($aSubsts as $_key => $_value) {
-    $rv = call_user_func($replaceFunction, ($aRegEx ? SLASH . $_key . SLASH . 'iU' : $_key), $_value, $rv);
+    $rv = call_user_func($replaceFunction, ($aRegEx ? kSlash . $_key . kSlash . 'iU' : $_key), $_value, $rv);
   }
 
   return !$rv ? gError('Something has gone wrong...') : $rv;
@@ -1191,7 +1232,7 @@ function gContains(string|array $aHaystack, string|array $aNeedle, int $aPos = 0
 /**********************************************************************************************************************
 * Explodes a string to an array without empty elements if it starts or ends with the separator
 *
-* @dep DASH_SEPARATOR
+* @dep kSpaceDashSpace
 * @dep gError()
 * @param $aSeparator   Separator used to split the string
 * @param $aString      String to be exploded
@@ -1205,22 +1246,22 @@ function gExplodeStr(string $aSeparator, string $aString) {
 /**********************************************************************************************************************
 * Splits a path into an indexed array of parts
 *
-* @dep SLASH
+* @dep kSlash
 * @dep gExplodeStr()
 * @param $aPath   URI Path
 * @returns        array of uri parts in order
 ***********************************************************************************************************************/
 function gExplodePath(string $aPath) {
-  return ($aPath == SLASH) ? ['root'] : gExplodeStr(SLASH, $aPath);
+  return ($aPath == kSlash) ? ['root'] : gExplodeStr(kSlash, $aPath);
 }
 
 /**********************************************************************************************************************
 * Builds and Normalizes Paths
 ***********************************************************************************************************************/
 function gBuildPath(...$aParts) {
-  $parts = EMPTY_ARRAY;
-  $path = strtr(implode(SLASH, $aParts), '\\', SLASH);
-  $prefix = EMPTY_STRING;
+  $parts = kEmptyArray;
+  $path = strtr(implode(kSlash, $aParts), '\\', kSlash);
+  $prefix = kEmptyString;
   $absolute = false;
 
   // extract a prefix being a protocol://, protocol:, protocol://drive: or simply drive:
@@ -1229,32 +1270,32 @@ function gBuildPath(...$aParts) {
     $path = substr($path, strlen($prefix));
   }
 
-  if (substr($path, 0, 1) === SLASH) {
+  if (substr($path, 0, 1) === kSlash) {
     $absolute = true;
     $path = substr($path, 1);
   }
 
   $up = false;
 
-  foreach (explode(SLASH, $path) as $chunk) {
-    if (DOTDOT === $chunk && ($absolute || $up)) {
+  foreach (explode(kSlash, $path) as $chunk) {
+    if (kDotDot === $chunk && ($absolute || $up)) {
       array_pop($parts);
-      $up = !(empty($parts) || DOTDOT === end($parts));
+      $up = !(empty($parts) || kDotDot === end($parts));
     }
-    elseif (DOT !== $chunk && EMPTY_STRING !== $chunk) {
+    elseif (kDot !== $chunk && kEmptyString !== $chunk) {
       $parts[] = $chunk;
-      $up = DOTDOT !== $chunk;
+      $up = kDotDot !== $chunk;
     }
   }
 
-  return $prefix . ($absolute ? SLASH : EMPTY_STRING) . implode(SLASH, $parts);
+  return $prefix . ($absolute ? kSlash : kEmptyString) . implode(kSlash, $parts);
 }
 
 /**********************************************************************************************************************
 * Strips a string from another string
 ***********************************************************************************************************************/
-function gStripStr (string $aStr, string $aStrip = EMPTY_STRING) {
-  return str_replace($aStrip, EMPTY_STRING, $aStr);
+function gStripStr (string $aStr, string $aStrip = kEmptyString) {
+  return str_replace($aStrip, kEmptyString, $aStr);
 }
 
 /**********************************************************************************************************************
@@ -1272,19 +1313,19 @@ function gPasswordHash(string $aPassword, mixed $aCrypt = PASSWORD_BCRYPT, ?stri
   switch ($aCrypt) {
     case PASSWORD_CLEARTEXT:
       // We can "hash" a cleartext password by prefixing it with the fake algo prefix $clear$
-      if (str_contains($aPassword, DOLLAR)) {
+      if (str_contains($aPassword, kDollar)) {
         // Since the dollar sign is used as an identifier and/or separator for hashes we can't use passwords
         // that contain said dollar sign.
         gError('Cannot "hash" this Clear Text password because it contains a dollar sign.');
       }
 
-      return DOLLAR . PASSWORD_CLEARTEXT . DOLLAR . time() . DOLLAR . $aPassword;
+      return kDollar . PASSWORD_CLEARTEXT . kDollar . time() . kDollar . $aPassword;
     case PASSWORD_HTACCESS:
       // We want to be able to generate Apache APR1-MD5 hashes for use in .htpasswd situations.
       $salt = $aSalt;
 
       if (!$salt) {
-        $salt = EMPTY_STRING;
+        $salt = kEmptyString;
 
         for ($i = 0; $i < 8; $i++) {
           $offset = hexdec(bin2hex(openssl_random_pseudo_bytes(1))) % 64;
@@ -1294,7 +1335,7 @@ function gPasswordHash(string $aPassword, mixed $aCrypt = PASSWORD_BCRYPT, ?stri
 
       $salt = substr($salt, 0, 8);
       $max = strlen($aPassword);
-      $context = $aPassword . DOLLAR . PASSWORD_HTACCESS . DOLLAR . $salt;
+      $context = $aPassword . kDollar . PASSWORD_HTACCESS . kDollar . $salt;
       $binary = pack('H32', md5($aPassword . $salt . $aPassword));
 
       for ($i = $max; $i > 0; $i -= 16) {
@@ -1321,7 +1362,7 @@ function gPasswordHash(string $aPassword, mixed $aCrypt = PASSWORD_BCRYPT, ?stri
         $binary = pack('H32', md5($new));
       }
 
-      $hash = EMPTY_STRING;
+      $hash = kEmptyString;
 
       for ($i = 0; $i < 5; $i++) {
         $k = $i + 6;
@@ -1333,7 +1374,7 @@ function gPasswordHash(string $aPassword, mixed $aCrypt = PASSWORD_BCRYPT, ?stri
       $hash = chr(0) . chr(0) . $binary[11] . $hash;
       $hash = strtr(strrev(substr(base64_encode($hash), 2)), BASE64_ALPHABET, APRMD5_ALPHABET);
 
-      return DOLLAR . PASSWORD_HTACCESS . DOLLAR . $salt . DOLLAR . $hash;
+      return kDollar . PASSWORD_HTACCESS . kDollar . $salt . kDollar . $hash;
     default:
       // Else, our standard (and secure) default is PASSWORD_BCRYPT hashing.
       // We do not allow custom salts for anything using password_hash as PHP generates secure salts.
@@ -1347,8 +1388,8 @@ function gPasswordHash(string $aPassword, mixed $aCrypt = PASSWORD_BCRYPT, ?stri
 ***********************************************************************************************************************/
 function gPasswordVerify(string $aPassword, string $aHash) {
   // We can accept a pseudo-hash for clear text passwords in the format of $clrtxt$unix-epoch$clear-text-password
-  if (str_starts_with($aHash, DOLLAR . PASSWORD_CLEARTEXT)) {
-    $password = gExplodeStr(DOLLAR, $aHash) ?? null;
+  if (str_starts_with($aHash, kDollar . PASSWORD_CLEARTEXT)) {
+    $password = gExplodeStr(kDollar, $aHash) ?? null;
 
     if ($password == null || count($password) > 3) {
       gError('Unable to "verify" this Clear Text "hashed" password.');
@@ -1358,8 +1399,8 @@ function gPasswordVerify(string $aPassword, string $aHash) {
   }
 
   // We can also accept an Apache APR1-MD5 password that is commonly used in .htpasswd
-  if (str_starts_with($aHash, DOLLAR . PASSWORD_HTACCESS)) {
-    $salt = gExplodeStr(DOLLAR, $aHash)[1] ?? null;
+  if (str_starts_with($aHash, kDollar . PASSWORD_HTACCESS)) {
+    $salt = gExplodeStr(kDollar, $aHash)[1] ?? null;
 
     if(!$salt) {
       gError('Unable to verify this Apache APR1-MD5 hashed password.');
@@ -1458,14 +1499,14 @@ function gGlobalIdentifer(?string $aVendor = null, ?bool $aXPCOM = null) {
 
   // We want the GUID in XPIDL/C++ Header notation
   if ($aXPCOM) {
-    $explode = gExplodeStr(DASH, $guid);
-    $rv = "%{C++" . NEW_LINE . "//" . SPACE . "{" . $guid . "}" . NEW_LINE .
-          "#define NS_CHANGE_ME_IID" . SPACE . 
+    $explode = gExplodeStr(kDash, $guid);
+    $rv = "%{C++" . kNewLine . "//" . kSpace . "{" . $guid . "}" . kNewLine .
+          "#define NS_CHANGE_ME_IID" . kSpace . 
           vsprintf("{ 0x%s, 0x%s, 0x%s, { 0x%s, 0x%s, 0x%s, 0x%s, 0x%s, 0x%s, 0x%s, 0x%s } }",
                    [$explode[0], $explode[1], $explode[2],
                     substr($explode[3], 0, 2), substr($explode[3], 2, 2),
                     substr($explode[4], 0, 2), substr($explode[4], 2, 2), substr($explode[4], 4, 2),
-                    substr($explode[4], 6, 2), substr($explode[4], 8, 2), substr($explode[4], 10, 2)]) . NEW_LINE .
+                    substr($explode[4], 6, 2), substr($explode[4], 8, 2), substr($explode[4], 10, 2)]) . kNewLine .
           "%}";
   }
   else {
@@ -1916,9 +1957,7 @@ if (file_exists(gBuildPath(ROOT_PATH, 'base', 'src', 'app.php'))) {
 
   gLoadComponent(gRegistry('app.component'));
 
-  // This totally useless but fuckin amazing error message will only be displayed when a component doesn't otherwise
-  // terminate execution and debug is on. Otherwise it will send a 404 and terminate execution.
-  gNotFound('PC LOAD LETTER');
+  gNotFound();
 }
 
 } // ==================================================================================================================

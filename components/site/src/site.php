@@ -4,28 +4,28 @@
 
 // == | Setup | =======================================================================================================
 
-const kDisableSpecialComponent = false;
+gRegistrySet('console.content.siteName', 'BinOC Preview');
 
-gRegisterIncludes('COMPONENTS', ['site', 'update']);
-gRegisterIncludes('MODULES', ['content']);
-gRegisterIncludes('LIBRARIES', array(
-  'smarty' => 'smarty/Smarty.class.php',
-));
-
-gRegistrySet('console.content.siteName', 'Binary Outcast');
+const kMultiSiteDomains = array(
+  'binaryoutcast.com',
+  'binocnetwork.com',
+  'mattatobin.com',
+  'thereisonlyxul.org',
+  'fossamail.org',
+);
 
 // ====================================================================================================================
 
 // == | Global Functions | ============================================================================================
 
-//gContent('test');
-//print(var_export(gRegistryUtils::GetStore(), true)); exit();
-
 // ====================================================================================================================
 
 // == | Main | ========================================================================================================
 
-// ====================================================================================================================
+  if (gRegistry('app.path.0') == 'root') {
+    gContent('Homepage');
+  }
 
+// ====================================================================================================================
 
 ?>

@@ -92,7 +92,7 @@
       /* ========================================================================== */
 
       #binoc-caption {
-        height: 26px;
+        height: 28px;
         margin-top: 0px;
         margin-left: 8px;
         margin-right: 8px;
@@ -100,14 +100,14 @@
         text-align: left;
         color: #fff;
         font-size: 10pt;
-        text-shadow: 0px 2px 2px black, 0px 1px 1px #000;
+        text-shadow: 0px 1px 1px black, 0px 1px 1px #000;
         overflow: hidden;
       }
 
       #binoc-caption p {
         margin: 0px;
-        padding-top: 4px;
-        font-size: 9pt;
+        padding-top: 5px;
+        font-size: 9.5pt;
         font-weight: bold;
       }
 
