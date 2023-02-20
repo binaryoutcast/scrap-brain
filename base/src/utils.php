@@ -374,7 +374,7 @@ class gRegistryUtils {
 
     if (gContains($aKey, '[]', -1)) {
       $aKey = substr($aKey, 0, -2);
-      $value = gRegistry($aKey, kEmptyArray);
+      $value = gGetRegKey$aKey, kEmptyArray);
 
       if (!is_array($value)) {
         $value = [$value];
@@ -532,14 +532,14 @@ class gErrorUtils {
 
       $commandBar = ['onclick="history.back()"' => 'Go Back'];
 
-      if (gRegistryUtils::Component(kSpecialComponent) || !gRegistry('constant.components.site')) {
-        gRegistrySet('console.content.commandbar', array_merge($commandBar, ['/special/' => kSpecialComponentName]));
+      if (gRegistryUtils::Component(kSpecialComponent) || !gGetRegKey'constant.components.site')) {
+        gSetRegKey('console.content.commandbar', array_merge($commandBar, ['/special/' => kSpecialComponentName]));
       }
       else {
-        gRegistrySet('console.content.commandbar', array_merge($commandBar, kDefaultMenu));
+        gSetRegKey('console.content.commandbar', array_merge($commandBar, kDefaultMenu));
       }
 
-      gRegistrySet('console.content.sectionName', kEmptyString);
+      gSetRegKey('console.content.sectionName', kEmptyString);
       gContent($content, ['title' => $title, 'statustext' => 'Please contact a system administrator.']);
     }
 
@@ -645,18 +645,18 @@ class gConsoleUtils {
       }
     }
 
-    return gRegistrySet('console.output.httpHeaders[]', $aHeader);
+    return gSetRegKey('console.output.httpHeaders[]', $aHeader);
   }
 
   /********************************************************************************************************************
   * Gets or sets the "default" content type so we don't have to output the header ourselves in most cases.
   ********************************************************************************************************************/
   public static function SendHeaders() {
-    $responseCode = gRegistry('console.output.responseCode', 200);
-    gRegistrySet('console.output.httpHeaders[]', 'Content-type'. kColon . kSpace . gRegistry('console.output.contentType'));
-    gRegistrySet('console.output.httpHeaders[]', 'HTTP/1.1' . kSpace . $responseCode . kSpace . self::kStatusCodes[$responseCode]);
+    $responseCode = gGetRegKey'console.output.responseCode', 200);
+    gSetRegKey('console.output.httpHeaders[]', 'Content-type'. kColon . kSpace . gGetRegKey'console.output.contentType'));
+    gSetRegKey('console.output.httpHeaders[]', 'HTTP/1.1' . kSpace . $responseCode . kSpace . self::kStatusCodes[$responseCode]);
 
-    $headers = gRegistry('console.output.httpHeaders', kEmptyArray);
+    $headers = gGetRegKey'console.output.httpHeaders', kEmptyArray);
 
     foreach ($headers as $_value) {
       header(trim($_value), true);
@@ -668,11 +668,11 @@ class gConsoleUtils {
   ********************************************************************************************************************/
   public static function HttpStatusCode(?string $aStatusCode = null) {
     if (!$aStatusCode) {
-      gRegistry('console.output.responseCode', 200);
+      gGetRegKey'console.output.responseCode', 200);
     }
 
     if (gContains(self::kStatusCodes, $aStatusCode, 1)) {
-      gRegistrySet('console.output.responseCode', $aStatusCode);
+      gSetRegKey('console.output.responseCode', $aStatusCode);
     }
   }
 
@@ -681,11 +681,11 @@ class gConsoleUtils {
   ********************************************************************************************************************/
   public static function ContentType(?string $aContentType = null) {
      if ($aContentType === null) {
-      return gRegistry('console.output.contentType');
+      return gGetRegKey'console.output.contentType');
     }
 
     if (gContains(self::kMimeTypes, $aContentType, 1)) {
-      return gRegistrySet('console.output.contentType', self::kMimeTypes[$aContentType]);
+      return gSetRegKey('console.output.contentType', self::kMimeTypes[$aContentType]);
     }
   }
 
@@ -811,24 +811,24 @@ class gConsoleUtils {
       $content = '<form><textarea class="special-textbox" name="content" rows="30" readonly>' . $content . '</textarea></form>';
     }
 
-    $siteName = gRegistry('console.content.siteName', kAppName);
-    $sectionName = gRegistry('console.content.sectionName', kEmptyString);
+    $siteName = gGetRegKey'console.content.siteName', kAppName);
+    $sectionName = gGetRegKey'console.content.sectionName', kEmptyString);
 
     if ($sectionName) {
       $siteName = $sectionName . kSpaceDashSpace . $siteName;
     }
 
-    $isTestCase = (!$metadata('title') && gRegistry('special.testCase') && gRegistryUtils::Component(kSpecialComponent));
+    $isTestCase = (!$metadata('title') && gGetRegKey'special.testCase') && gRegistryUtils::Component(kSpecialComponent));
 
     $substs = array(
       '{$SITE_STYLESHEET}'  => $stylesheet ?? kEmptyString,
       '{$PAGE_CONTENT}'     => $content,
       '{$SITE_DOMAIN}'      => gRegistryUtils::SuperGlobal('server', 'SERVER_NAME'),
       '{$SITE_NAME}'        => $siteName,
-      '{$SITE_MENU}'        => $menuize(gRegistry('console.content.commandbar')),
+      '{$SITE_MENU}'        => $menuize(gGetRegKey'console.content.commandbar')),
       '{$SITE_SECTION}'     => $sectionName ?? kEmptyString,
-      '{$PAGE_TITLE}'       => $isTestCase ? '[Test]' . kSpace . gRegistry('special.testCase') : ($metadata('title') ?? 'Output'),
-      '{$PAGE_STATUS}'      => $metadata('statustext') ?? gRegistry('console.content.statustext'),
+      '{$PAGE_TITLE}'       => $isTestCase ? '[Test]' . kSpace . gGetRegKey'special.testCase') : ($metadata('title') ?? 'Output'),
+      '{$PAGE_STATUS}'      => $metadata('statustext') ?? gGetRegKey'console.content.statustext'),
       '{$SKIN_PATH}'        => gBuildPath(kSlash, 'base', 'skin'),
       '{$SOFTWARE_VENDOR}'  => kAppVendor,
       '{$SOFTWARE_NAME}'    => kAppName,
@@ -845,20 +845,20 @@ class gConsoleUtils {
   * Special Component!
   ***********************************************************************************************************************/
   public static function SpecialComponent() {
-    $spCurrentPath = gRegistry('app.path');
-    $spPathCount = gRegistry('app.depth');
+    $spCurrentPath = gGetRegKey'app.path');
+    $spPathCount = gGetRegKey'app.depth');
 
     if ($spCurrentPath[0] != kSpecialComponent) {
       gRedirect(kSlash . kSpecialComponent . kSlash);
     }
 
-    gRegistrySet('app.component', kSpecialComponent);
+    gSetRegKey('app.component', kSpecialComponent);
 
-    if (gRegistry('constant.disableSpecialComponent')) {
+    if (gGetRegKey'constant.disableSpecialComponent')) {
       gNotFound('The special component has been disabled.');
     }
 
-    gRegistrySet('console.content.sectionName', kSpecialComponentName);
+    gSetRegKey('console.content.sectionName', kSpecialComponentName);
 
     // The Special Component never has more than one level below it
     // We still have to determine the root of the component though...
@@ -882,7 +882,7 @@ class gConsoleUtils {
       '/special/hex/'             => 'Hex String',
     );
 
-    gRegistrySet('console.content.commandbar', gRegistry('constant.components.site') ?
+    gSetRegKey('console.content.commandbar', gGetRegKey'constant.components.site') ?
                                                array_merge(kDefaultMenu, $spCommandBar) :
                                                $spCommandBar);
 
@@ -898,7 +898,7 @@ class gConsoleUtils {
         if (!gRegistryUtils::Debug()) {
           gNotFound('This special function is not available when not in debug mode.');
         }
-        $spCase = gRegistry('superglobal.get.case');
+        $spCase = gGetRegKey'superglobal.get.case');
         $spTestsPath = gBuildPath(ROOT_PATH, 'base', 'tests');
         $spGlobTests = glob(gBuildPath($spTestsPath, kAsterisk . PHP_EXTENSION));
         $spTests = kEmptyArray;
@@ -912,7 +912,7 @@ class gConsoleUtils {
             gError('Unknown test case.');
           }
 
-          gRegistrySet('special.testCase', $spCase);
+          gSetRegKey('special.testCase', $spCase);
           require_once(gBuildPath($spTestsPath, $spCase . PHP_EXTENSION));
           headers_sent() ? exit() : gError('The operation completed successfully.');
         }
@@ -930,8 +930,8 @@ class gConsoleUtils {
         gContent($spContent, ['title' => 'Test Cases']);
         break;
       case 'vc':
-        $spCurrVer = gRegistry('superglobal.post.currVer');
-        $spCompVer = gRegistry('superglobal.post.compVer');
+        $spCurrVer = gGetRegKey'superglobal.post.currVer');
+        $spCompVer = gGetRegKey'superglobal.post.compVer');
 
         if ($spCurrVer && $spCompVer) {
           gContent(gVersionCompare($spCurrVer, $spCompVer));
@@ -943,11 +943,11 @@ class gConsoleUtils {
         gContent('<h2>nsIVersionComparator</h2>' . $spForm, ['title' => 'Runtime Status']);
         break;
       case 'guid':
-        gContent(gGlobalIdentifer(gRegistry('superglobal.get.vendor'), true),
+        gContent(gGlobalIdentifer(gGetRegKey'superglobal.get.vendor'), true),
                  ['title' => 'Globally Unique Identifier (In XPIDL Notation)', 'textbox' => true]);
         break;
       case 'hex':
-        gContent(gHexString(gRegistry('superglobal.get.length', 40)),
+        gContent(gHexString(gGetRegKey'superglobal.get.length', 40)),
                  ['title' => 'Pseudo-Random Hex String', 'textbox' => true]);
         break;
       case 'system':
@@ -1050,8 +1050,8 @@ gErrorUtils::init();
 
 // --------------------------------------------------------------------------------------------------------------------
 
-function gRegistry(...$args) { return gRegistryUtils::GetRegistryValue(...$args); }
-function gRegistrySet(...$args) { return gRegistryUtils::SetRegistryValue(...$args); }
+function gGetRegKey...$args) { return gRegistryUtils::GetRegistryValue(...$args); }
+function gSetRegKey(...$args) { return gRegistryUtils::SetRegistryValue(...$args); }
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -1158,7 +1158,7 @@ function gLoadComponent(string $aComponent) {
     gConsoleUtils::SpecialComponent();
   }
 
-  $componentPath = gRegistry('constant.components' . kDot . $aComponent);
+  $componentPath = gGetRegKey'constant.components' . kDot . $aComponent);
 
   if (!$componentPath) {
     gNotFound('Unknown component.');
@@ -1940,7 +1940,7 @@ class Arr {
 namespace { // == | Bootstrap | =======================================================================================
 
 // We want the ability for the entry point to specify that the application effectively IS the special component
-if (gRegistry('constant.appIsSpecialComponent')) {
+if (gGetRegKey'constant.appIsSpecialComponent')) {
   gLoadComponent(kSpecialComponent);
 }
 
@@ -1951,11 +1951,11 @@ if (gRegistry('constant.appIsSpecialComponent')) {
 if (file_exists(gBuildPath(ROOT_PATH, 'base', 'src', 'app.php'))) {
   require_once(gBuildPath(ROOT_PATH, 'base', 'src', 'app.php'));
 
-  if (gRegistry('app.path.0') == kSpecialComponent) {
-    gRegistrySet('app.component', kSpecialComponent);
+  if (gGetRegKey'app.path.0') == kSpecialComponent) {
+    gSetRegKey('app.component', kSpecialComponent);
   }
 
-  gLoadComponent(gRegistry('app.component'));
+  gLoadComponent(gGetRegKey'app.component'));
 
   gNotFound();
 }

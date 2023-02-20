@@ -4,7 +4,7 @@
 
 // == | Setup | =======================================================================================================
 
-gRegistrySet('console.content.siteName', 'BinOC Preview');
+gSetRegKey('console.content.siteName', 'BinOC Preview');
 
 const kMultiSiteDomains = array(
   'binaryoutcast.com',
@@ -22,7 +22,7 @@ const kMultiSiteDomains = array(
 
 // == | Main | ========================================================================================================
 
-  if (gRegistry('app.path.0') == 'root') {
+  if (gGetRegKey'app.path.0') == 'root') {
     gContent('Homepage');
   }
 
