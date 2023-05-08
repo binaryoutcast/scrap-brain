@@ -12,7 +12,7 @@ gRegisterIncludes('LIBRARIES', array(
   'smarty' => 'smarty/Smarty.class.php',
 ));
 
-gSetRegKey('console.content.siteName', 'Binary Outcast');
+gRegSet('console.content.siteName', 'Binary Outcast');
 
 // ====================================================================================================================
 
