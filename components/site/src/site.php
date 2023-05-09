@@ -6,14 +6,6 @@
 
 gRegSet('console.content.siteName', 'BinOC Preview');
 
-const kMultiSiteDomains = array(
-  'binaryoutcast.com',
-  'binocnetwork.com',
-  'mattatobin.com',
-  'thereisonlyxul.org',
-  'fossamail.org',
-);
-
 // ====================================================================================================================
 
 // == | Global Functions | ============================================================================================

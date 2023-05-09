@@ -201,7 +201,7 @@ const JSON_ENCODE_FLAGS     = kJsonFlags['display'];
 // == | Static Registry Class | =======================================================================================
 
 // Define a global array to hold the registry
-$gRuntime = [];
+$gRuntime = kEmptyArray;
 
 class gRegistryUtils {
   private static $sInited = false;
@@ -403,7 +403,7 @@ class gRegistryUtils {
         break;
       case '_GET':
         if (SAPI_IS_CLI && $GLOBALS['argc'] > 1) {
-          $args = [];
+          $args = kEmptyArray;
 
           foreach (array_slice($GLOBALS['argv'], 1) as $_value) {
             $arg = @explode('=', $_value);
@@ -1195,6 +1195,15 @@ function gSubst(string $aString, array $aSubsts, bool $aRegEx = false) {
 }
 
 /**********************************************************************************************************************
+* Placeholder substitution similar to the simplest useage of python string format.. Does not support {} or aligment.
+***********************************************************************************************************************/
+function gFormatStr(string $aString, ...$aSubsts) {
+  $substs = kEmptyArray;
+  foreach ($aSubsts as $_key => $_value) { $substs['{' . $_key . '}'] = $_value; }
+  return gSubst($aString, $substs);
+}
+
+/**********************************************************************************************************************
 * Determines if needle is in haystack and optionally where
 ***********************************************************************************************************************/
 function gContains(string|array $aHaystack, string|array $aNeedle, int $aPos = 0) {
@@ -1500,7 +1509,7 @@ function gGlobalIdentifer(?string $aVendor = null, ?bool $aXPCOM = null) {
   // We want the GUID in XPIDL/C++ Header notation
   if ($aXPCOM) {
     $explode = gExplodeStr(kDash, $guid);
-    $rv = "%{C++" . kNewLine . "//" . kSpace . "{" . $guid . "}" . kNewLine .
+    $rv = "%{C++" . kNewLine . "//" . kSpace . kLeftBrace . $guid . kRightBrace . kNewLine .
           "#define NS_CHANGE_ME_IID" . kSpace . 
           vsprintf("{ 0x%s, 0x%s, 0x%s, { 0x%s, 0x%s, 0x%s, 0x%s, 0x%s, 0x%s, 0x%s, 0x%s } }",
                    [$explode[0], $explode[1], $explode[2],
@@ -1948,6 +1957,7 @@ if (gRegistry('constant.appIsSpecialComponent')) {
 // loading. Execution from app.php will not eventually return to the entry point. It will end here one way or another.
 // Otherwise, we will continue back to the script that included us where we will need to handle
 // some form of output if there is any.
+
 if (file_exists(gBuildPath(ROOT_PATH, 'base', 'src', 'app.php'))) {
   require_once(gBuildPath(ROOT_PATH, 'base', 'src', 'app.php'));
 
