@@ -221,7 +221,7 @@ class gRegistryUtils {
       return implode(kDot, $aReturnSub ? array_slice($host, 0, -2) : array_slice($host, -2, 2));
     };
 
-    $path = gExplodePath(self::SuperGlobal('get', 'path', kSlash));
+    $path = gArrayStrUtils::ExplodePath(self::SuperGlobal('get', 'path', kSlash));
 
     self::$sStore = array(
       'app' => array(
@@ -503,6 +503,10 @@ class gErrorUtils {
   * Output details about a failure condition
   ******************************************************************************************************************/
   public static function report(array $aMetadata) {
+    if (gRegistryUtils::Debug() && gRegistryUtils::SuperGlobal('get', 'runtime')) {
+      gOutput((self::kPhpErrorCodes[$aMetadata['code']] ?? self::kPhpErrorCodes[E_ALL]) . kSpaceDashSpace . $aMetadata['message']);
+    }
+
     $traceline = fn($eFile, $eLine) => str_replace(ROOT_PATH, kEmptyString, $eFile) . kColon . $eLine;
     $functions = ['phpErrorHandler', 'phpExceptionHandler', 'trigger_error'];
     $trace = ($aMetadata['file'] && $aMetadata['line']) ? [$traceline($aMetadata['file'], $aMetadata['line'])] : kEmptyArray;
@@ -719,12 +723,14 @@ class gConsoleUtils {
   * Simply prints output and sends header if not cli and exits
   ******************************************************************************************************************/
   public static function Output(mixed $aContent, ?string $aHeader = 'text') {
-    $x1 = (gRegistryUtils::SuperGlobal('get', 'runtime'));
     $content = null;
 
-    if ($x1) {
+    if (gRegistryUtils::Debug() && gRegistryUtils::SuperGlobal('get', 'runtime')) {
+      $content = array_merge(gRegistryUtils::GetStore(), ['superglobal' => $GLOBALS]);
+      $content['console']['output']['responseBody'] = $aContent;
+      $content = json_encode($content, kJsonFlags['display']);
       self::Header('text', true);
-      print(json_encode(gRegistryUtils::GetStore(), kJsonFlags['display']));
+      print($content);
       exit();
     }
 
@@ -1043,6 +1049,141 @@ class gConsoleUtils {
 
 // ====================================================================================================================
 
+// == | Static String Class | =========================================================================================
+
+class gArrayStrUtils {
+  /**********************************************************************************************************************
+  * gSubst
+  ***********************************************************************************************************************/
+  public static function Subst(string $aString, array $aSubsts, bool $aRegEx = false) {
+    $rv = $aString;
+    $replaceFunction = $aRegEx ? 'preg_replace' : 'str_replace';
+
+    foreach ($aSubsts as $_key => $_value) {
+      $rv = call_user_func($replaceFunction, ($aRegEx ? kSlash . $_key . kSlash . 'iU' : $_key), $_value, $rv);
+    }
+
+    return !$rv ? gError('Something has gone wrong...') : $rv;
+  } 
+    
+  /**********************************************************************************************************************
+  * gSubstEx
+  ***********************************************************************************************************************/
+  public static function SubstEx(string $aString, ...$aSubsts) {
+    $keyPrefix = kLeftBrace;
+    $keySuffix = kRightBrace;
+    $substs = $aSubsts;
+
+    // Accept an array as the second argument for named placeholder substitution further arguments or
+    // changing the pre/post prefix.
+    if (is_array($aSubsts[0])) {
+      $substs = $aSubsts[0];
+      $keyPrefix = $aSubsts[1] ?? kLeftBrace;
+      $keySuffix = $aSubsts[2] ?? kRightBrace;
+    }
+
+    $keyCallback = function ($aKey) use ($keyPrefix, $keySuffix) { return $keyPrefix . $aKey . $keySuffix; };
+    $substs = array_combine(array_map($keyCallback, array_keys($substs)), $substs);
+
+    return self::Subst($aString, $substs);
+  }
+
+  /**********************************************************************************************************************
+  * gContains
+  ***********************************************************************************************************************/
+  public static function Contains(string|array $aHaystack, string|array $aNeedle, int $aPos = 0) {
+    $rv = false;
+    if (is_string($aNeedle)) {
+      $aNeedle = [$aNeedle];
+    }
+
+    foreach ($aNeedle as $_value) {
+      if (is_array($aHaystack)) {
+        $rv = ($aPos === 1) ? array_key_exists($_value, $aHaystack) : in_array($_value, $aHaystack);
+      }
+      else {
+        switch ($aPos) {
+          case 1:
+            $rv = str_starts_with($aHaystack, $_value);
+            break;
+          case -1:
+            $rv = str_ends_with($aHaystack, $_value);
+            break;
+          case 0:
+          default:
+            $rv = str_contains($aHaystack, $_value);
+        }
+      }
+
+      if ($rv) {
+        break;
+      }
+    }
+
+    return $rv;
+  }
+
+  /**********************************************************************************************************************
+  * gExplodeStr
+  ***********************************************************************************************************************/
+  public static function ExplodeStr(string $aSeparator, string $aString) {
+    return (!str_contains($aString, $aSeparator)) ? [$aString] :
+            array_values(array_filter(explode($aSeparator, $aString), 'strlen'));
+  }
+
+  /**********************************************************************************************************************
+  * gExplodePath
+  ***********************************************************************************************************************/
+  public static function ExplodePath(string $aPath) {
+    return ($aPath == kSlash) ? ['root'] : self::ExplodeStr(kSlash, $aPath);
+  }
+
+  /**********************************************************************************************************************
+  * gBuildPath
+  ***********************************************************************************************************************/
+  public static function BuildPath(...$aParts) {
+    $parts = kEmptyArray;
+    $path = strtr(implode(kSlash, $aParts), '\\', kSlash);
+    $prefix = kEmptyString;
+    $absolute = false;
+
+    // extract a prefix being a protocol://, protocol:, protocol://drive: or simply drive:
+    if (preg_match('{^( [0-9a-z]{2,}+: (?: // (?: [a-z]: )? )? | [a-z]: )}ix', $path, $match)) {
+      $prefix = $match[1];
+      $path = substr($path, strlen($prefix));
+    }
+
+    if (substr($path, 0, 1) === kSlash) {
+      $absolute = true;
+      $path = substr($path, 1);
+    }
+
+    $up = false;
+
+    foreach (explode(kSlash, $path) as $chunk) {
+      if (kDotDot === $chunk && ($absolute || $up)) {
+        array_pop($parts);
+        $up = !(empty($parts) || kDotDot === end($parts));
+      }
+      elseif (kDot !== $chunk && kEmptyString !== $chunk) {
+        $parts[] = $chunk;
+        $up = kDotDot !== $chunk;
+      }
+    }
+
+    return $prefix . ($absolute ? kSlash : kEmptyString) . implode(kSlash, $parts);
+  }
+
+  /**********************************************************************************************************************
+  * gStripStr
+  ***********************************************************************************************************************/
+  public static function StripStr (string $aStr, string $aStrip = kEmptyString) {
+    return str_replace($aStrip, kEmptyString, $aStr);
+  }
+}
+
+// ====================================================================================================================
+
 // == | Static Class Init and Global Wrappers | =======================================================================
 
 gRegistryUtils::init();
@@ -1050,28 +1191,39 @@ gErrorUtils::init();
 
 // --------------------------------------------------------------------------------------------------------------------
 
-function gRegistry(...$args) { return gRegistryUtils::GetRegistryValue(...$args); }
-function gRegSet(...$args) { return gRegistryUtils::SetRegistryValue(...$args); }
+function gRegistry                    (...$args) { return gRegistryUtils::GetRegistryValue(...$args); }
+function gRegSet                      (...$args) { return gRegistryUtils::SetRegistryValue(...$args); }
+function gSuperGlobal                 (...$args) { return gRegistryUtils::SuperGlobal(...$args); }
 
 // --------------------------------------------------------------------------------------------------------------------
 
-function gHeader(...$args) { return gConsoleUtils::Header(...$args); }
-function gContentType(...$args) { return gConsoleUtils::ContentType(...$args); }
-function gRedirect(...$args) { return gConsoleUtils::Redirect(...$args); }
-function gContent(...$args) { return gConsoleUtils::Content(...$args); }
-function gOutput(...$args) { return gConsoleUtils::Output(...$args); }
+function gHeader                      (...$args) { return gConsoleUtils::Header(...$args); }
+function gContentType                 (...$args) { return gConsoleUtils::ContentType(...$args); }
+function gSendHeaders                 (...$args) { return gConsoleUtils::SendHeaders(...$args); }
+function gRedirect                    (...$args) { return gConsoleUtils::Redirect(...$args); }
+function gContent                     (...$args) { return gConsoleUtils::Content(...$args); }
+function gOutput                      (...$args) { return gConsoleUtils::Output(...$args); }
 
 // --------------------------------------------------------------------------------------------------------------------
 
-function gVersionCompare(...$args) { return mozilla\vc\ToolkitVersionComparator::compare(...$args); }
+function gSubst                       (...$args) { return gArrayStrUtils::Subst(...$args); }
+function gSubstEx                     (...$args) { return gArrayStrUtils::SubstEx(...$args); }
+function gContains                    (...$args) { return gArrayStrUtils::Contains(...$args); }
+function gExplodeStr                  (...$args) { return gArrayStrUtils::ExplodeStr(...$args); }
+function gBuildPath                   (...$args) { return gArrayStrUtils::BuildPath(...$args); }
+function gStripStr                    (...$args) { return gArrayStrUtils::StripStr(...$args); }
 
 // --------------------------------------------------------------------------------------------------------------------
 
-function gGetArrVal(...$args) { return Illuminate\Support\Arr::get(...$args); }
-function gSetArrVal(...$args) { return Illuminate\Support\Arr::set(...$args); }
-function gDelArrVal(...$args) { return Illuminate\Support\Arr::forget(...$args); }
-function gDotArray(...$args) { return Illuminate\Support\Arr::dot(...$args); }
-function gUndotArray(...$args) { return Illuminate\Support\Arr::undot(...$args); }
+function gVersionCompare              (...$args) { return mozilla\vc\ToolkitVersionComparator::compare(...$args); }
+
+// --------------------------------------------------------------------------------------------------------------------
+
+function gGetArrVal                   (...$args) { return Illuminate\Support\Arr::get(...$args); }
+function gSetArrVal                   (...$args) { return Illuminate\Support\Arr::set(...$args); }
+function gDelArrVal                   (...$args) { return Illuminate\Support\Arr::forget(...$args); }
+function gDotArray                    (...$args) { return Illuminate\Support\Arr::dot(...$args); }
+function gUndotArray                  (...$args) { return Illuminate\Support\Arr::undot(...$args); }
 
 // ====================================================================================================================
 
@@ -1168,143 +1320,8 @@ function gLoadComponent(string $aComponent) {
     gNotFound('Failed to load the' . kSpace . $aComponent . kSpace .'component.');
   }
 
+  gRegSet('app.componentPath', gBuildPath(ROOT_PATH, 'components', $aComponent));
   require_once($componentPath);
-}
-
-/**********************************************************************************************************************
-* Basic Filter Substitution of a string
-*
-* @dep kEmptyString
-* @dep kSlash
-* @dep kSpace
-* @dep gError()
-* @param $aSubsts               multi-dimensional array of keys and values to be replaced
-* @param $aString               string to operate on
-* @param $aRegEx                set to true if pcre
-* @returns                      bitwise int value representing applications
-***********************************************************************************************************************/
-function gSubst(string $aString, array $aSubsts, bool $aRegEx = false) {
-  $rv = $aString;
-  $replaceFunction = $aRegEx ? 'preg_replace' : 'str_replace';
-
-  foreach ($aSubsts as $_key => $_value) {
-    $rv = call_user_func($replaceFunction, ($aRegEx ? kSlash . $_key . kSlash . 'iU' : $_key), $_value, $rv);
-  }
-
-  return !$rv ? gError('Something has gone wrong...') : $rv;
-}
-
-/**********************************************************************************************************************
-* Placeholder substitution similar to the simplest useage of python string format.. Does not support {} or aligment.
-***********************************************************************************************************************/
-function gFormatStr(string $aString, ...$aSubsts) {
-  $substs = kEmptyArray;
-  foreach ($aSubsts as $_key => $_value) { $substs['{' . $_key . '}'] = $_value; }
-  return gSubst($aString, $substs);
-}
-
-/**********************************************************************************************************************
-* Determines if needle is in haystack and optionally where
-***********************************************************************************************************************/
-function gContains(string|array $aHaystack, string|array $aNeedle, int $aPos = 0) {
-  $rv = false;
-  if (is_string($aNeedle)) {
-    $aNeedle = [$aNeedle];
-  }
-
-  foreach ($aNeedle as $_value) {
-    if (is_array($aHaystack)) {
-      $rv = ($aPos === 1) ? array_key_exists($_value, $aHaystack) : in_array($_value, $aHaystack);
-    }
-    else {
-      switch ($aPos) {
-        case 1:
-          $rv = str_starts_with($aHaystack, $_value);
-          break;
-        case -1:
-          $rv = str_ends_with($aHaystack, $_value);
-          break;
-        case 0:
-        default:
-          $rv = str_contains($aHaystack, $_value);
-      }
-    }
-
-    if ($rv) {
-      break;
-    }
-  }
-
-  return $rv;
-}
-
-/**********************************************************************************************************************
-* Explodes a string to an array without empty elements if it starts or ends with the separator
-*
-* @dep kSpaceDashSpace
-* @dep gError()
-* @param $aSeparator   Separator used to split the string
-* @param $aString      String to be exploded
-* @returns             Array of string parts
-***********************************************************************************************************************/
-function gExplodeStr(string $aSeparator, string $aString) {
-  return (!str_contains($aString, $aSeparator)) ? [$aString] :
-          array_values(array_filter(explode($aSeparator, $aString), 'strlen'));
-}
-
-/**********************************************************************************************************************
-* Splits a path into an indexed array of parts
-*
-* @dep kSlash
-* @dep gExplodeStr()
-* @param $aPath   URI Path
-* @returns        array of uri parts in order
-***********************************************************************************************************************/
-function gExplodePath(string $aPath) {
-  return ($aPath == kSlash) ? ['root'] : gExplodeStr(kSlash, $aPath);
-}
-
-/**********************************************************************************************************************
-* Builds and Normalizes Paths
-***********************************************************************************************************************/
-function gBuildPath(...$aParts) {
-  $parts = kEmptyArray;
-  $path = strtr(implode(kSlash, $aParts), '\\', kSlash);
-  $prefix = kEmptyString;
-  $absolute = false;
-
-  // extract a prefix being a protocol://, protocol:, protocol://drive: or simply drive:
-  if (preg_match('{^( [0-9a-z]{2,}+: (?: // (?: [a-z]: )? )? | [a-z]: )}ix', $path, $match)) {
-    $prefix = $match[1];
-    $path = substr($path, strlen($prefix));
-  }
-
-  if (substr($path, 0, 1) === kSlash) {
-    $absolute = true;
-    $path = substr($path, 1);
-  }
-
-  $up = false;
-
-  foreach (explode(kSlash, $path) as $chunk) {
-    if (kDotDot === $chunk && ($absolute || $up)) {
-      array_pop($parts);
-      $up = !(empty($parts) || kDotDot === end($parts));
-    }
-    elseif (kDot !== $chunk && kEmptyString !== $chunk) {
-      $parts[] = $chunk;
-      $up = kDotDot !== $chunk;
-    }
-  }
-
-  return $prefix . ($absolute ? kSlash : kEmptyString) . implode(kSlash, $parts);
-}
-
-/**********************************************************************************************************************
-* Strips a string from another string
-***********************************************************************************************************************/
-function gStripStr (string $aStr, string $aStrip = kEmptyString) {
-  return str_replace($aStrip, kEmptyString, $aStr);
 }
 
 /**********************************************************************************************************************
@@ -1957,7 +1974,6 @@ if (gRegistry('constant.appIsSpecialComponent')) {
 // loading. Execution from app.php will not eventually return to the entry point. It will end here one way or another.
 // Otherwise, we will continue back to the script that included us where we will need to handle
 // some form of output if there is any.
-
 if (file_exists(gBuildPath(ROOT_PATH, 'base', 'src', 'app.php'))) {
   require_once(gBuildPath(ROOT_PATH, 'base', 'src', 'app.php'));
 
@@ -1966,8 +1982,7 @@ if (file_exists(gBuildPath(ROOT_PATH, 'base', 'src', 'app.php'))) {
   }
 
   gLoadComponent(gRegistry('app.component'));
-
-  gNotFound();
+  gNotFound('PC LOAD LETTER');
 }
 
 } // ==================================================================================================================
