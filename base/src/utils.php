@@ -12,7 +12,7 @@ namespace { // == | Setup and Global Constants | ===============================
 const kUtilsPhpMinVersion = '8.1';
 
 // Check that we can run on this version of PHP
-if (gVersionCompare(PHP_VERSION, kUtilsPhpMinVersion) < 0) {
+if (mozilla\vc\ToolkitVersionComparator::compare(PHP_VERSION, kUtilsPhpMinVersion) < 0) {
   die('BinOC Metropolis Utilities: PHP ' . kUtilsPhpMinVersion . ' or newer is required.');
 }
 
@@ -33,15 +33,28 @@ define('kUtilities', '2.0.0a1');
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// These constants must be defined because they might be used before gRegistryUtils is init'd
+if (!defined('kAppVendor'))             { define('kAppVendor', 'Binary Outcast'); }
+if (!defined('kAppName'))               { define('kAppName', 'Metropolis-based Software'); }
+if (!defined('kAppVersion'))            { define('kAppVersion', kUtilities); }
+if (!defined('kAppRepository'))         { define('kAppRepository', '#'); }
+if (!defined('kUtilsGlobalWrappers'))   { define('kUtilsGlobalWrappers', true); }
+if (!defined('kInitOnlyOnBootstrap'))   { define('kInitOnlyOnBootstrap', false); }
+
+// --------------------------------------------------------------------------------------------------------------------
+
 // We like CLI
 define('SAPI_IS_CLI', php_sapi_name() == "cli");
 define('CLI_NO_LOGO', in_array('--nologo', $GLOBALS['argv'] ?? []));
 
-// Enable Error Reporting
+// Enable PHP Error Reporting
 error_reporting(E_ALL);
 ini_set('display_errors', true);
 ini_set('display_startup_errors', true);
 const E_EXCEPTION = 65536;
+
+// Debug flag (CLI always triggers debug mode)
+define('kDebugMode', $_GET['debug'] ?? SAPI_IS_CLI);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -97,29 +110,6 @@ const kNegOne               = -1;
 const kZero                 = 0;
 const kPosOne               = 1;
 
-
-// ------------------------------------------------------------------------------------------------------------------
-
-if (!defined('kAppVendor')) {
-  define('kAppVendor', 'Binary Outcast');
-}
-
-if (!defined('kAppName')) {
-  define('kAppName', 'Metropolis-based Software');
-}
-
-if (!defined('kAppVersion')) {
-  define('kAppVersion', kUtilities);
-}
-
-if (!defined('kAppRepository')) {
-  define('kAppRepository', '#');
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-// Debug flag (CLI always triggers debug mode)
-define('kDebugMode', $_GET['debug'] ?? SAPI_IS_CLI);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -198,6 +188,414 @@ const JSON_ENCODE_FLAGS     = kJsonFlags['display'];
 
 // ====================================================================================================================
 
+// These are global wrapping functions. Most are optional except for the most basic functions
+// Assuming I get the classes internally referencing methods classwise
+
+// Application
+  function gBootstrap                   (...$args) { return gAppUtils::Bootstrap(...$args); }
+  function gError                       (...$args) { return gAppUtils::Error(...$args); }
+  function gNotFound                    (...$args) { return gAppUtils::gNotFound(...$args); }
+  function gReadFile                    (...$args) { return gAppUtils::ReadFile(...$args); }
+
+// Registry
+  function gSuperGlobal                 (...$args) { return gRegistryUtils::SuperGlobal(...$args); }
+
+// Console
+  function gOutput                      (...$args) { return gConsoleUtils::Output(...$args); }
+
+// Mozilla Toolkit Vc
+  function gVersionCompare              (...$args) { return mozilla\vc\ToolkitVersionComparator::compare(...$args); }
+
+if (kUtilsGlobalWrappers) {
+  // Application
+  function gCheckValue                  (...$args) { return gAppUtils::CheckValue(...$args); }
+  function gRegisterIncludes            (...$args) { return gAppUtils::RegisterIncludes(...$args); }
+  function gLoadComponent               (...$args) { return gAppUtils::LoadComponent(...$args); }
+  function gPasswordHash                (...$args) { return gAppUtils::PasswordHash(...$args); }
+  function gPasswordVerify              (...$args) { return gAppUtils::PasswordVerify(...$args); }
+  function gHexString                   (...$args) { return gAppUtils::HexString(...$args); }
+  function gGlobalIdentifer             (...$args) { return gAppUtils::GlobalIdentifer(...$args); }
+
+  // Registry
+  function gRegistry                    (...$args) { return gRegistryUtils::GetRegistryValue(...$args); }
+  function gRegSet                      (...$args) { return gRegistryUtils::SetRegistryValue(...$args); }
+
+  // Console
+  function gHeader                      (...$args) { return gConsoleUtils::Header(...$args); }
+  function gContentType                 (...$args) { return gConsoleUtils::ContentType(...$args); }
+  function gSendHeaders                 (...$args) { return gConsoleUtils::SendHeaders(...$args); }
+  function gRedirect                    (...$args) { return gConsoleUtils::Redirect(...$args); }
+  function gContent                     (...$args) { return gConsoleUtils::Content(...$args); }
+
+  // Array/String (no I will -NOT- call it gStringUtils.. Don't even start.)
+  function gSubst                       (...$args) { return gArrayStrUtils::Subst(...$args); }
+  function gSubstEx                     (...$args) { return gArrayStrUtils::SubstEx(...$args); }
+  function gContains                    (...$args) { return gArrayStrUtils::Contains(...$args); }
+  function gExplodeStr                  (...$args) { return gArrayStrUtils::ExplodeStr(...$args); }
+  function gBuildPath                   (...$args) { return gArrayStrUtils::BuildPath(...$args); }
+  function gStripStr                    (...$args) { return gArrayStrUtils::StripStr(...$args); }
+
+  // Dotted Key Array access and manipulation - MIT Licensed - See Namespace
+  function gGetArrVal                   (...$args) { return Illuminate\Support\Arr::get(...$args); }
+  function gSetArrVal                   (...$args) { return Illuminate\Support\Arr::set(...$args); }
+  function gDelArrVal                   (...$args) { return Illuminate\Support\Arr::forget(...$args); }
+  function gDotArray                    (...$args) { return Illuminate\Support\Arr::dot(...$args); }
+  function gUndotArray                  (...$args) { return Illuminate\Support\Arr::undot(...$args); }
+}
+
+// ====================================================================================================================
+
+// == | Static App Class | ============================================================================================
+
+class gAppUtils {
+  /********************************************************************************************************************
+  * Bootstrap
+  *********************************************************************************************************************/
+  public static function Bootstrap() {
+    // Init the static classes
+    gRegistryUtils::init();
+    gErrorUtils::init();
+    
+    if (!kInitOnlyOnBootstrap) {
+      // We want the ability for the entry point to specify that the application effectively IS the special component
+      if (gRegistry('constant.appIsSpecialComponent')) {
+        gLoadComponent(kSpecialComponent);
+      }
+
+      // If this is going to be apart of a larger application then why not detect and load it up and also provide the component
+      // loading. Execution from app.php will not eventually return to the entry point. It will end here one way or another.
+      // Otherwise, we will continue back to the script that included us where we will need to handle
+      // some form of output if there is any.
+      if (file_exists(gBuildPath(ROOT_PATH, 'base', 'src', 'app.php'))) {
+        require_once(gBuildPath(ROOT_PATH, 'base', 'src', 'app.php'));
+
+        if (gRegistry('app.path.0') == kSpecialComponent) {
+          gRegSet('app.component', kSpecialComponent);
+        }
+
+        gLoadComponent(gRegistry('app.component'));
+        gNotFound('PC LOAD LETTER');
+      }
+    }
+  }
+
+  /********************************************************************************************************************
+  * Loads a component.
+  *********************************************************************************************************************/
+  public static function LoadComponent(string $aComponent) {
+    if ($aComponent == kSpecialComponent) {
+      gConsoleUtils::SpecialComponent();
+    }
+
+    $componentPath = gRegistry('constant.components' . kDot . $aComponent);
+
+    if (!$componentPath) {
+      gNotFound('Unknown component.');
+    }
+
+    if (!file_exists($componentPath)) {
+      gNotFound('Failed to load the' . kSpace . $aComponent . kSpace .'component.');
+    }
+
+    gRegSet('app.componentPath', gBuildPath(ROOT_PATH, 'components', $aComponent));
+    require_once($componentPath);
+  }
+
+  /********************************************************************************************************************
+  * Read a file
+  *********************************************************************************************************************/
+  public static function ReadFile(string $aFile) {
+    $rv = @file_get_contents($aFile);
+    return gCheckValue($rv);
+  }
+
+  /********************************************************************************************************************
+  * General Error Function
+  *
+  * @param $aMessage   Error message
+  ********************************************************************************************************************/
+  function Error(?string $aMessage = null) {
+    if (!$aMessage) {
+      $aMessage = 'No further details were provided.';
+    }
+
+    gErrorUtils::report(['code' => E_ALL, 'message' => $aMessage,
+                         'file' => null, 'line' => null,
+                         'trace' => debug_backtrace(2)]);
+  }
+
+  /********************************************************************************************************************
+  * Sends 404 or prints error message if debug mode
+  ********************************************************************************************************************/
+  function NotFound(?string $aMessage = null) {
+    if (!$aMessage) {
+      $aMessage = 'HTTP/1.1 404 Not Found';
+    }
+
+    if (gRegistryUtils::Debug()) {
+      gErrorUtils::report(['code' => E_ALL, 'message' => $aMessage,
+                           'file' => null, 'line' => null,
+                           'trace' => debug_backtrace(2)]);
+    }
+    gHeader(404);
+  }
+
+  /********************************************************************************************************************
+  * Check if a value should be null according to Phoebus-legacy behavior.
+  ********************************************************************************************************************/
+  public static function CheckValue($aValue, $aFallback = null) {
+    return (empty($aValue) || $aValue === 'none') ? $aFallback : $aValue;
+  }
+
+  /********************************************************************************************************************
+  * Registers Files to be included such as components and modules
+  *********************************************************************************************************************/
+  public static function RegisterIncludes($aConst, $aIncludes) {
+    $aConst = strtoupper($aConst);
+
+    if (defined($aConst)) {
+      gError($aConst . kSpace . 'files are already registered and may not be updated.');
+    }
+
+    $includes = kEmptyArray;
+
+    foreach($aIncludes as $_key => $_value) { 
+      switch ($aConst) {
+        case 'COMPONENTS':
+          $includes[$_value] = gBuildPath(ROOT_PATH, 'components', $_value, 'src', $_value . kFileExt['php']);
+          break;
+        case 'MODULES':
+          $includes[$_value] = gBuildPath(ROOT_PATH, 'modules', $_value . kFileExt['php']);
+          break;
+        case 'LIBRARIES':
+          if (str_contains($_value, kDot . kDot)) {
+            return;
+          }
+
+          $includes[$_key] = gBuildPath(ROOT_PATH, 'third_party', $_value);
+          break;
+        default:
+          gfError('Unknown include type');
+      }
+    }
+
+    define($aConst, $includes);
+  }
+
+  /********************************************************************************************************************
+  * Hash a password
+  *********************************************************************************************************************/
+  public static function PasswordHash(string $aPassword, mixed $aCrypt = PASSWORD_BCRYPT, ?string $aSalt = null) {
+    switch ($aCrypt) {
+      case PASSWORD_CLEARTEXT:
+        // We can "hash" a cleartext password by prefixing it with the fake algo prefix $clear$
+        if (str_contains($aPassword, kDollar)) {
+          // Since the dollar sign is used as an identifier and/or separator for hashes we can't use passwords
+          // that contain said dollar sign.
+          gError('Cannot "hash" this Clear Text password because it contains a dollar sign.');
+        }
+
+        return kDollar . PASSWORD_CLEARTEXT . kDollar . time() . kDollar . $aPassword;
+      case PASSWORD_HTACCESS:
+        // We want to be able to generate Apache APR1-MD5 hashes for use in .htpasswd situations.
+        $salt = $aSalt;
+
+        if (!$salt) {
+          $salt = kEmptyString;
+
+          for ($i = 0; $i < 8; $i++) {
+            $offset = hexdec(bin2hex(openssl_random_pseudo_bytes(1))) % 64;
+            $salt .= APRMD5_ALPHABET[$offset];
+          }
+        }
+
+        $salt = substr($salt, 0, 8);
+        $max = strlen($aPassword);
+        $context = $aPassword . kDollar . PASSWORD_HTACCESS . kDollar . $salt;
+        $binary = pack('H32', md5($aPassword . $salt . $aPassword));
+
+        for ($i = $max; $i > 0; $i -= 16) {
+          $context .= substr($binary, 0, min(16, $i));
+        }
+
+        for ($i = $max; $i > 0; $i >>= 1) {
+          $context .= ($i & 1) ? chr(0) : $aPassword[0];
+        }
+
+        $binary = pack('H32', md5($context));
+
+        for ($i = 0; $i < 1000; $i++) {
+          $new = ($i & 1) ? $aPassword : $binary;
+
+          if ($i % 3) {
+            $new .= $salt;
+          }
+          if ($i % 7) {
+            $new .= $aPassword;
+          }
+
+          $new .= ($i & 1) ? $binary : $aPassword;
+          $binary = pack('H32', md5($new));
+        }
+
+        $hash = kEmptyString;
+
+        for ($i = 0; $i < 5; $i++) {
+          $k = $i + 6;
+          $j = $i + 12;
+          if($j == 16) $j = 5;
+          $hash = $binary[$i] . $binary[$k] . $binary[$j] . $hash;
+        }
+
+        $hash = chr(0) . chr(0) . $binary[11] . $hash;
+        $hash = strtr(strrev(substr(base64_encode($hash), 2)), BASE64_ALPHABET, APRMD5_ALPHABET);
+
+        return kDollar . PASSWORD_HTACCESS . kDollar . $salt . kDollar . $hash;
+      default:
+        // Else, our standard (and secure) default is PASSWORD_BCRYPT hashing.
+        // We do not allow custom salts for anything using password_hash as PHP generates secure salts.
+        // PHP Generated passwords are also self-verifiable via password_verify.
+        return password_hash($aPassword, $aCrypt);
+    }
+  }
+
+  /********************************************************************************************************************
+  * Check a password
+  *********************************************************************************************************************/
+  public static function PasswordVerify(string $aPassword, string $aHash) {
+    // We can accept a pseudo-hash for clear text passwords in the format of $clrtxt$unix-epoch$clear-text-password
+    if (str_starts_with($aHash, kDollar . PASSWORD_CLEARTEXT)) {
+      $password = gExplodeStr(kDollar, $aHash) ?? null;
+
+      if ($password == null || count($password) > 3) {
+        gError('Unable to "verify" this Clear Text "hashed" password.');
+      }
+
+      return $aPassword === $password[2];
+    }
+
+    // We can also accept an Apache APR1-MD5 password that is commonly used in .htpasswd
+    if (str_starts_with($aHash, kDollar . PASSWORD_HTACCESS)) {
+      $salt = gExplodeStr(kDollar, $aHash)[1] ?? null;
+
+      if(!$salt) {
+        gError('Unable to verify this Apache APR1-MD5 hashed password.');
+      }
+
+      return gPasswordHash($aPassword, PASSWORD_HTACCESS, $salt) === $aHash;
+    }
+
+    // For everything else send to the native password_verify function.
+    // It is almost certain to be a BCRYPT2 hash but hashed passwords generated BY PHP are self-verifiable.
+    return password_verify($aPassword, $aHash);
+  }
+
+  /********************************************************************************************************************
+  * Generate a random hexadecimal string
+  *
+  * @param $aLength   Desired number of final chars
+  * @returns          Random hexadecimal string of desired length
+  ********************************************************************************************************************/
+  public static function HexString(int $aLength = 40) {
+    return bin2hex(random_bytes(($aLength <= 1) ? 1 : (int)($aLength / 2)));
+  }
+
+  /********************************************************************************************************************
+  * Generates a v4 random guid or a "v4bis" guid with static vendor node
+  *********************************************************************************************************************/
+  public static function GlobalIdentifer(?string $aVendor = null, ?bool $aXPCOM = null) {
+    if ($aVendor) {
+      if (strlen($aVendor) < 3) {
+        gError('v4bis GUIDs require a defined vendor of more than three characters long.');
+      }
+
+      // Generate 8 pseudo-random bytes
+      $bytes = random_bytes(8);
+
+      // Knock the vendor down to lowercase so we can simply use a switch case
+      $vendor = strtolower($aVendor);
+
+      // We want "v4bis" GUIDs with the static vendor part to match the broken version of GUIDGenX for known nodes
+      // as Moonchild half-assed his tool that he wrote for this and by the time it was discovered several were already
+      // using the previous incorrect GUIDs.
+      $knownVendorNodes = array(
+        'binoc'           => hex2bin('8b97957ad5f8ea47'),
+        'binoc-legacy'    => hex2bin('9aa0aa0e607640b9'),
+        'mcp'             => hex2bin('bfc5fc555c87dbc4'),
+        'lootyhoof'       => hex2bin('b98e98e62085837f'),
+        'pseudo-static'   => hex2bin('93763763d1ad1978')
+      );
+
+      switch ($vendor) {
+        case 'binoc':
+        case 'binaryoutcast':
+        case 'binary outcast':
+          $bytes .= $knownVendorNodes['binoc'];
+          break;
+        case 'pseudo-static':
+        case 'pseudostatic':
+        case 'addons':
+        case 'add-ons':
+        case 'apmo':
+          $bytes .= $knownVendorNodes['pseudo-static'];
+          break;
+        case 'mcp':
+        case 'moonchildproductions':
+        case 'moonchild productions':
+          $bytes .= $knownVendorNodes['mcp'];
+          break;
+        case 'binoc-legacy':
+        case 'lootyhoof':
+          $bytes .= $knownVendorNodes[$vendor];
+          break;
+        default:
+          // Since this isn't a known busted vendor node then we should generate it ourselves.
+          // This matches the fixed version of GUIDGenX 1.1 which is to md5 hash the vendor string then
+          // split it in half and XOR the two parts for the final value
+
+          // XXXTobin: A future update could do a sha256 by halving it and again then XORing the two sets
+          // and XORing the final two results.
+          $vendor = hash('md5', $aVendor);
+          $bytes .= hex2bin(substr($vendor, 0, 16)) ^ hex2bin(substr($vendor, 16, 32));
+      }
+    }
+    else {
+      // This is a pure v4 UUID spec which is 16 pseudo-random bytes.
+      $bytes = random_bytes(16);
+    }
+
+    // Set the version and variant
+    // NOTE: Like everything Moonzilla does, he did not set the variant value when he initially came up with "v4bis"
+    // putting a busted generator into production use for the whole team. Sad!
+    $bytes[6] = chr(ord($bytes[6]) & 0x0f | 0x40);
+    $bytes[8] = chr(ord($bytes[8]) & 0x3f | 0x80);
+
+    $hex = bin2hex($bytes);
+    $guid = vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split($hex, 4));
+
+    // We want the GUID in XPIDL/C++ Header notation
+    if ($aXPCOM) {
+      $explode = gExplodeStr(kDash, $guid);
+      $rv = "%{C++" . kNewLine . "//" . kSpace . kLeftBrace . $guid . kRightBrace . kNewLine .
+            "#define NS_CHANGE_ME_IID" . kSpace . 
+            vsprintf("{ 0x%s, 0x%s, 0x%s, { 0x%s, 0x%s, 0x%s, 0x%s, 0x%s, 0x%s, 0x%s, 0x%s } }",
+                     [$explode[0], $explode[1], $explode[2],
+                      substr($explode[3], 0, 2), substr($explode[3], 2, 2),
+                      substr($explode[4], 0, 2), substr($explode[4], 2, 2), substr($explode[4], 4, 2),
+                      substr($explode[4], 6, 2), substr($explode[4], 8, 2), substr($explode[4], 10, 2)]) . kNewLine .
+            "%}";
+    }
+    else {
+      // We like Microsoft GUID notation not UUID which means Lisa needs braces.. I mean the GUID.
+      $rv = '{' . $guid . '}';
+    }
+
+    return $rv;
+  }
+}
+
+// ====================================================================================================================
+
 // == | Static Registry Class | =======================================================================================
 
 // Define a global array to hold the registry
@@ -207,6 +605,13 @@ class gRegistryUtils {
   private static $sInited = false;
   private static $sStore = kEmptyArray;
   private static $sRemap = ['constant', 'superglobal'];
+
+  /********************************************************************************************************************
+  * Are we inited?
+  ********************************************************************************************************************/
+  public static function ready() {
+    return $sInited;
+  }
 
   /********************************************************************************************************************
   * Init the static class
@@ -1181,368 +1586,9 @@ class gArrayStrUtils {
     return str_replace($aStrip, kEmptyString, $aStr);
   }
 }
-
 // ====================================================================================================================
-
-// == | Static Class Init and Global Wrappers | =======================================================================
-
-gRegistryUtils::init();
-gErrorUtils::init();
-
-// --------------------------------------------------------------------------------------------------------------------
-
-function gRegistry                    (...$args) { return gRegistryUtils::GetRegistryValue(...$args); }
-function gRegSet                      (...$args) { return gRegistryUtils::SetRegistryValue(...$args); }
-function gSuperGlobal                 (...$args) { return gRegistryUtils::SuperGlobal(...$args); }
-
-// --------------------------------------------------------------------------------------------------------------------
-
-function gHeader                      (...$args) { return gConsoleUtils::Header(...$args); }
-function gContentType                 (...$args) { return gConsoleUtils::ContentType(...$args); }
-function gSendHeaders                 (...$args) { return gConsoleUtils::SendHeaders(...$args); }
-function gRedirect                    (...$args) { return gConsoleUtils::Redirect(...$args); }
-function gContent                     (...$args) { return gConsoleUtils::Content(...$args); }
-function gOutput                      (...$args) { return gConsoleUtils::Output(...$args); }
-
-// --------------------------------------------------------------------------------------------------------------------
-
-function gSubst                       (...$args) { return gArrayStrUtils::Subst(...$args); }
-function gSubstEx                     (...$args) { return gArrayStrUtils::SubstEx(...$args); }
-function gContains                    (...$args) { return gArrayStrUtils::Contains(...$args); }
-function gExplodeStr                  (...$args) { return gArrayStrUtils::ExplodeStr(...$args); }
-function gBuildPath                   (...$args) { return gArrayStrUtils::BuildPath(...$args); }
-function gStripStr                    (...$args) { return gArrayStrUtils::StripStr(...$args); }
-
-// --------------------------------------------------------------------------------------------------------------------
-
-function gVersionCompare              (...$args) { return mozilla\vc\ToolkitVersionComparator::compare(...$args); }
-
-// --------------------------------------------------------------------------------------------------------------------
-
-function gGetArrVal                   (...$args) { return Illuminate\Support\Arr::get(...$args); }
-function gSetArrVal                   (...$args) { return Illuminate\Support\Arr::set(...$args); }
-function gDelArrVal                   (...$args) { return Illuminate\Support\Arr::forget(...$args); }
-function gDotArray                    (...$args) { return Illuminate\Support\Arr::dot(...$args); }
-function gUndotArray                  (...$args) { return Illuminate\Support\Arr::undot(...$args); }
-
-// ====================================================================================================================
-
-// == | Global Functions | ============================================================================================
-
-/**********************************************************************************************************************
-* General Error Function
-*
-* @param $aMessage   Error message
-**********************************************************************************************************************/
-function gError(?string $aMessage = null) {
-  if (!$aMessage) {
-    $aMessage = 'No further details were provided.';
-  }
-
-  gErrorUtils::report(['code' => E_ALL, 'message' => $aMessage,
-                       'file' => null, 'line' => null,
-                       'trace' => debug_backtrace(2)]);
-}
-
-/**********************************************************************************************************************
-* Sends 404 or prints error message if debug mode
-**********************************************************************************************************************/
-function gNotFound(?string $aMessage = null) {
-  if (!$aMessage) {
-    $aMessage = 'HTTP/1.1 404 Not Found';
-  }
-
-  if (gRegistryUtils::Debug()) {
-    gErrorUtils::report(['code' => E_ALL, 'message' => $aMessage,
-                         'file' => null, 'line' => null,
-                         'trace' => debug_backtrace(2)]);
-  }
-  gHeader(404);
-}
-
-/**********************************************************************************************************************
-* Check if a value should be null according to Phoebus-legacy behavior.
-**********************************************************************************************************************/
-function gCheckValue($aValue, $aFallback = null) {
-  return (empty($aValue) || $aValue === 'none') ? $aFallback : $aValue;
-}
-
-/**********************************************************************************************************************
-* Registers Files to be included such as components and modules
-***********************************************************************************************************************/
-function gRegisterIncludes($aConst, $aIncludes) {
-  $aConst = strtoupper($aConst);
-
-  if (defined($aConst)) {
-    gError($aConst . kSpace . 'files are already registered and may not be updated.');
-  }
-
-  $includes = kEmptyArray;
-
-  foreach($aIncludes as $_key => $_value) { 
-    switch ($aConst) {
-      case 'COMPONENTS':
-        $includes[$_value] = gBuildPath(ROOT_PATH, 'components', $_value, 'src', $_value . kFileExt['php']);
-        break;
-      case 'MODULES':
-        $includes[$_value] = gBuildPath(ROOT_PATH, 'modules', $_value . kFileExt['php']);
-        break;
-      case 'LIBRARIES':
-        if (str_contains($_value, kDot . kDot)) {
-          return;
-        }
-
-        $includes[$_key] = gBuildPath(ROOT_PATH, 'third_party', $_value);
-        break;
-      default:
-        gfError('Unknown include type');
-    }
-  }
-
-  define($aConst, $includes);
-}
-
-/**********************************************************************************************************************
-* Loads a component.
-***********************************************************************************************************************/
-function gLoadComponent(string $aComponent) {
-  if ($aComponent == kSpecialComponent) {
-    gConsoleUtils::SpecialComponent();
-  }
-
-  $componentPath = gRegistry('constant.components' . kDot . $aComponent);
-
-  if (!$componentPath) {
-    gNotFound('Unknown component.');
-  }
-
-  if (!file_exists($componentPath)) {
-    gNotFound('Failed to load the' . kSpace . $aComponent . kSpace .'component.');
-  }
-
-  gRegSet('app.componentPath', gBuildPath(ROOT_PATH, 'components', $aComponent));
-  require_once($componentPath);
-}
-
-/**********************************************************************************************************************
-* Read a file
-***********************************************************************************************************************/
-function gReadFile(string $aFile) {
-  $rv = @file_get_contents($aFile);
-  return gCheckValue($rv);
-}
-
-/**********************************************************************************************************************
-* Hash a password
-***********************************************************************************************************************/
-function gPasswordHash(string $aPassword, mixed $aCrypt = PASSWORD_BCRYPT, ?string $aSalt = null) {
-  switch ($aCrypt) {
-    case PASSWORD_CLEARTEXT:
-      // We can "hash" a cleartext password by prefixing it with the fake algo prefix $clear$
-      if (str_contains($aPassword, kDollar)) {
-        // Since the dollar sign is used as an identifier and/or separator for hashes we can't use passwords
-        // that contain said dollar sign.
-        gError('Cannot "hash" this Clear Text password because it contains a dollar sign.');
-      }
-
-      return kDollar . PASSWORD_CLEARTEXT . kDollar . time() . kDollar . $aPassword;
-    case PASSWORD_HTACCESS:
-      // We want to be able to generate Apache APR1-MD5 hashes for use in .htpasswd situations.
-      $salt = $aSalt;
-
-      if (!$salt) {
-        $salt = kEmptyString;
-
-        for ($i = 0; $i < 8; $i++) {
-          $offset = hexdec(bin2hex(openssl_random_pseudo_bytes(1))) % 64;
-          $salt .= APRMD5_ALPHABET[$offset];
-        }
-      }
-
-      $salt = substr($salt, 0, 8);
-      $max = strlen($aPassword);
-      $context = $aPassword . kDollar . PASSWORD_HTACCESS . kDollar . $salt;
-      $binary = pack('H32', md5($aPassword . $salt . $aPassword));
-
-      for ($i = $max; $i > 0; $i -= 16) {
-        $context .= substr($binary, 0, min(16, $i));
-      }
-
-      for ($i = $max; $i > 0; $i >>= 1) {
-        $context .= ($i & 1) ? chr(0) : $aPassword[0];
-      }
-
-      $binary = pack('H32', md5($context));
-
-      for ($i = 0; $i < 1000; $i++) {
-        $new = ($i & 1) ? $aPassword : $binary;
-
-        if ($i % 3) {
-          $new .= $salt;
-        }
-        if ($i % 7) {
-          $new .= $aPassword;
-        }
-
-        $new .= ($i & 1) ? $binary : $aPassword;
-        $binary = pack('H32', md5($new));
-      }
-
-      $hash = kEmptyString;
-
-      for ($i = 0; $i < 5; $i++) {
-        $k = $i + 6;
-        $j = $i + 12;
-        if($j == 16) $j = 5;
-        $hash = $binary[$i] . $binary[$k] . $binary[$j] . $hash;
-      }
-
-      $hash = chr(0) . chr(0) . $binary[11] . $hash;
-      $hash = strtr(strrev(substr(base64_encode($hash), 2)), BASE64_ALPHABET, APRMD5_ALPHABET);
-
-      return kDollar . PASSWORD_HTACCESS . kDollar . $salt . kDollar . $hash;
-    default:
-      // Else, our standard (and secure) default is PASSWORD_BCRYPT hashing.
-      // We do not allow custom salts for anything using password_hash as PHP generates secure salts.
-      // PHP Generated passwords are also self-verifiable via password_verify.
-      return password_hash($aPassword, $aCrypt);
-  }
-}
-
-/**********************************************************************************************************************
-* Check a password
-***********************************************************************************************************************/
-function gPasswordVerify(string $aPassword, string $aHash) {
-  // We can accept a pseudo-hash for clear text passwords in the format of $clrtxt$unix-epoch$clear-text-password
-  if (str_starts_with($aHash, kDollar . PASSWORD_CLEARTEXT)) {
-    $password = gExplodeStr(kDollar, $aHash) ?? null;
-
-    if ($password == null || count($password) > 3) {
-      gError('Unable to "verify" this Clear Text "hashed" password.');
-    }
-
-    return $aPassword === $password[2];
-  }
-
-  // We can also accept an Apache APR1-MD5 password that is commonly used in .htpasswd
-  if (str_starts_with($aHash, kDollar . PASSWORD_HTACCESS)) {
-    $salt = gExplodeStr(kDollar, $aHash)[1] ?? null;
-
-    if(!$salt) {
-      gError('Unable to verify this Apache APR1-MD5 hashed password.');
-    }
-
-    return gPasswordHash($aPassword, PASSWORD_HTACCESS, $salt) === $aHash;
-  }
-
-  // For everything else send to the native password_verify function.
-  // It is almost certain to be a BCRYPT2 hash but hashed passwords generated BY PHP are self-verifiable.
-  return password_verify($aPassword, $aHash);
-}
-
-/**********************************************************************************************************************
-* Generate a random hexadecimal string
-*
-* @param $aLength   Desired number of final chars
-* @returns          Random hexadecimal string of desired length
-**********************************************************************************************************************/
-function gHexString(int $aLength = 40) {
-  return bin2hex(random_bytes(($aLength <= 1) ? 1 : (int)($aLength / 2)));
-}
-
-/**********************************************************************************************************************
-* Generates a v4 random guid or a "v4bis" guid with static vendor node
-***********************************************************************************************************************/
-function gGlobalIdentifer(?string $aVendor = null, ?bool $aXPCOM = null) {
-  if ($aVendor) {
-    if (strlen($aVendor) < 3) {
-      gError('v4bis GUIDs require a defined vendor of more than three characters long.');
-    }
-
-    // Generate 8 pseudo-random bytes
-    $bytes = random_bytes(8);
-
-    // Knock the vendor down to lowercase so we can simply use a switch case
-    $vendor = strtolower($aVendor);
-
-    // We want "v4bis" GUIDs with the static vendor part to match the broken version of GUIDGenX for known nodes
-    // as Moonchild half-assed his tool that he wrote for this and by the time it was discovered several were already
-    // using the previous incorrect GUIDs.
-    $knownVendorNodes = array(
-      'binoc'           => hex2bin('8b97957ad5f8ea47'),
-      'binoc-legacy'    => hex2bin('9aa0aa0e607640b9'),
-      'mcp'             => hex2bin('bfc5fc555c87dbc4'),
-      'lootyhoof'       => hex2bin('b98e98e62085837f'),
-      'pseudo-static'   => hex2bin('93763763d1ad1978')
-    );
-
-    switch ($vendor) {
-      case 'binoc':
-      case 'binaryoutcast':
-      case 'binary outcast':
-        $bytes .= $knownVendorNodes['binoc'];
-        break;
-      case 'pseudo-static':
-      case 'pseudostatic':
-      case 'addons':
-      case 'add-ons':
-      case 'apmo':
-        $bytes .= $knownVendorNodes['pseudo-static'];
-        break;
-      case 'mcp':
-      case 'moonchildproductions':
-      case 'moonchild productions':
-        $bytes .= $knownVendorNodes['mcp'];
-        break;
-      case 'binoc-legacy':
-      case 'lootyhoof':
-        $bytes .= $knownVendorNodes[$vendor];
-        break;
-      default:
-        // Since this isn't a known busted vendor node then we should generate it ourselves.
-        // This matches the fixed version of GUIDGenX 1.1 which is to md5 hash the vendor string then
-        // split it in half and XOR the two parts for the final value
-
-        // XXXTobin: A future update could do a sha256 by halving it and again then XORing the two sets
-        // and XORing the final two results.
-        $vendor = hash('md5', $aVendor);
-        $bytes .= hex2bin(substr($vendor, 0, 16)) ^ hex2bin(substr($vendor, 16, 32));
-    }
-  }
-  else {
-    // This is a pure v4 UUID spec which is 16 pseudo-random bytes.
-    $bytes = random_bytes(16);
-  }
-
-  // Set the version and variant
-  // NOTE: Like everything Moonzilla does, he did not set the variant value when he initially came up with "v4bis"
-  // putting a busted generator into production use for the whole team. Sad!
-  $bytes[6] = chr(ord($bytes[6]) & 0x0f | 0x40);
-  $bytes[8] = chr(ord($bytes[8]) & 0x3f | 0x80);
-
-  $hex = bin2hex($bytes);
-  $guid = vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split($hex, 4));
-
-  // We want the GUID in XPIDL/C++ Header notation
-  if ($aXPCOM) {
-    $explode = gExplodeStr(kDash, $guid);
-    $rv = "%{C++" . kNewLine . "//" . kSpace . kLeftBrace . $guid . kRightBrace . kNewLine .
-          "#define NS_CHANGE_ME_IID" . kSpace . 
-          vsprintf("{ 0x%s, 0x%s, 0x%s, { 0x%s, 0x%s, 0x%s, 0x%s, 0x%s, 0x%s, 0x%s, 0x%s } }",
-                   [$explode[0], $explode[1], $explode[2],
-                    substr($explode[3], 0, 2), substr($explode[3], 2, 2),
-                    substr($explode[4], 0, 2), substr($explode[4], 2, 2), substr($explode[4], 4, 2),
-                    substr($explode[4], 6, 2), substr($explode[4], 8, 2), substr($explode[4], 10, 2)]) . kNewLine .
-          "%}";
-  }
-  else {
-    // We like Microsoft GUID notation not UUID which means Lisa needs braces.. I mean the GUID.
-    $rv = '{' . $guid . '}';
-  }
-
-  return $rv;
-}
 } // ==================================================================================================================
+// ====================================================================================================================
 
 namespace mozilla\vc { // == | nsIVersionComparator | =================================================================
 
@@ -1961,28 +2007,11 @@ class Arr {
     
 }
 
-} // ==================================================================================================================
+// ====================================================================================================================
+} namespace { // ======================================================================================================
+// ====================================================================================================================
 
-namespace { // == | Bootstrap | =======================================================================================
-
-// We want the ability for the entry point to specify that the application effectively IS the special component
-if (gRegistry('constant.appIsSpecialComponent')) {
-  gLoadComponent(kSpecialComponent);
-}
-
-// If this is going to be apart of a larger application then why not detect and load it up and also provide the component
-// loading. Execution from app.php will not eventually return to the entry point. It will end here one way or another.
-// Otherwise, we will continue back to the script that included us where we will need to handle
-// some form of output if there is any.
-if (file_exists(gBuildPath(ROOT_PATH, 'base', 'src', 'app.php'))) {
-  require_once(gBuildPath(ROOT_PATH, 'base', 'src', 'app.php'));
-
-  if (gRegistry('app.path.0') == kSpecialComponent) {
-    gRegSet('app.component', kSpecialComponent);
-  }
-
-  gLoadComponent(gRegistry('app.component'));
-  gNotFound('PC LOAD LETTER');
-}
+// You have entered grid 9-2 of sub-junction 12.. Proceed.
+gBootstrap();
 
 } // ==================================================================================================================
