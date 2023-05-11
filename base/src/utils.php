@@ -18,9 +18,9 @@ if (mozilla\vc\ToolkitVersionComparator::compare(PHP_VERSION, kUtilsPhpMinVersio
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Check for ROOT_PATH
-if (!defined('ROOT_PATH')) {
-  die('BinOC Metropolis Utilities: You MUST define ROOT_PATH.');
+// Check for kRootPath
+if (!defined('kRootPath')) {
+  die('BinOC Metropolis Utilities: You MUST define kRootPath.');
 }
 
 // Do not allow this to be included more than once...
@@ -122,13 +122,11 @@ const kDefaultMenu          = ['/' => 'Front Page (Home)'];
 const kSpecialComponent     = 'special';
 const kSpecialComponentName = 'Special Component';
 
-// XXX: Remove these!
 const PALEMOON_GUID         = '{8de7fcbb-c55c-4fbe-bfc5-fc555c87dbc4}';
 
 // ====================================================================================================================
 
 // These are global wrapping functions. Most are optional except for the most basic functions
-// Assuming I get the classes internally referencing methods classwise
 
 // Application
   function gBootstrap                   (...$args) { return gAppUtils::Bootstrap(...$args); }
@@ -136,18 +134,17 @@ const PALEMOON_GUID         = '{8de7fcbb-c55c-4fbe-bfc5-fc555c87dbc4}';
   function gNotFound                    (...$args) { return gAppUtils::gNotFound(...$args); }
   function gReadFile                    (...$args) { return gAppUtils::ReadFile(...$args); }
 
-// Registry
-  function gSuperGlobal                 (...$args) { return gRegistryUtils::SuperGlobal(...$args); }
-
 // Console
   function gOutput                      (...$args) { return gConsoleUtils::Output(...$args); }
 
 // Mozilla Toolkit Vc
   function gVersionCompare              (...$args) { return mozilla\vc\ToolkitVersionComparator::compare(...$args); }
 
+// --------------------------------------------------------------------------------------------------------------------
+
 if (kUtilsGlobalWrappers) {
   // Application
-  function gCheckValue                  (...$args) { return gAppUtils::CheckValue(...$args); }
+  function gEnsureValue                  (...$args) { return gAppUtils::EnsureValue(...$args); }
   function gRegisterIncludes            (...$args) { return gAppUtils::RegisterIncludes(...$args); }
   function gLoadComponent               (...$args) { return gAppUtils::LoadComponent(...$args); }
   function gPasswordHash                (...$args) { return gAppUtils::PasswordHash(...$args); }
@@ -156,8 +153,8 @@ if (kUtilsGlobalWrappers) {
   function gGlobalIdentifer             (...$args) { return gAppUtils::GlobalIdentifer(...$args); }
 
   // Registry
-  function gRegistry                    (...$args) { return gRegistryUtils::GetRegistryValue(...$args); }
-  function gRegSet                      (...$args) { return gRegistryUtils::SetRegistryValue(...$args); }
+  function gRegistry                    (...$args) { return gRegistryUtils::GetKey(...$args); }
+  function gRegSet                      (...$args) { return gRegistryUtils::SetKey(...$args); }
 
   // Console
   function gHeader                      (...$args) { return gConsoleUtils::Header(...$args); }
@@ -166,20 +163,13 @@ if (kUtilsGlobalWrappers) {
   function gRedirect                    (...$args) { return gConsoleUtils::Redirect(...$args); }
   function gContent                     (...$args) { return gConsoleUtils::Content(...$args); }
 
-  // Array/String (no I will -NOT- call it gStringUtils.. Don't even start.)
-  function gSubst                       (...$args) { return gArrayStrUtils::Subst(...$args); }
-  function gSubstEx                     (...$args) { return gArrayStrUtils::SubstEx(...$args); }
-  function gContains                    (...$args) { return gArrayStrUtils::Contains(...$args); }
-  function gExplodeStr                  (...$args) { return gArrayStrUtils::ExplodeStr(...$args); }
-  function gBuildPath                   (...$args) { return gArrayStrUtils::BuildPath(...$args); }
-  function gStripStr                    (...$args) { return gArrayStrUtils::StripStr(...$args); }
-
-  // Dotted Key Array access and manipulation - MIT Licensed - See Namespace
-  function gGetArrVal                   (...$args) { return Illuminate\Support\Arr::get(...$args); }
-  function gSetArrVal                   (...$args) { return Illuminate\Support\Arr::set(...$args); }
-  function gDelArrVal                   (...$args) { return Illuminate\Support\Arr::forget(...$args); }
-  function gDotArray                    (...$args) { return Illuminate\Support\Arr::dot(...$args); }
-  function gUndotArray                  (...$args) { return Illuminate\Support\Arr::undot(...$args); }
+  // Transform
+  function gSubst                       (...$args) { return gTransformUtils::Subst(...$args); }
+  function gSubstEx                     (...$args) { return gTransformUtils::SubstEx(...$args); }
+  function gContains                    (...$args) { return gTransformUtils::Contains(...$args); }
+  function gExplodeStr                  (...$args) { return gTransformUtils::ExplodeStr(...$args); }
+  function gBuildPath                   (...$args) { return gTransformUtils::BuildPath(...$args); }
+  function gStripStr                    (...$args) { return gTransformUtils::StripStr(...$args); }
 }
 
 // ====================================================================================================================
@@ -255,7 +245,7 @@ class gAppUtils {
 
     if (!kInitOnlyOnBootstrap) {
       // We want the ability for the entry point to specify that the application effectively IS the special component
-      if (gRegistryUtils::GetRegistryValue('constant.appIsSpecialComponent')) {
+      if (gRegistryUtils::GetKey('constant.appIsSpecialComponent')) {
         gAppUtils::LoadComponent(kSpecialComponent);
       }
 
@@ -263,14 +253,14 @@ class gAppUtils {
       // loading. Execution from app.php will not eventually return to the entry point. It will end here one way or another.
       // Otherwise, we will continue back to the script that included us where we will need to handle
       // some form of output if there is any.
-      if (file_exists(gArrayStrUtils::BuildPath(ROOT_PATH, 'base', 'src', 'app.php'))) {
-        require_once(gArrayStrUtils::BuildPath(ROOT_PATH, 'base', 'src', 'app.php'));
+      if (file_exists(gTransformUtils::BuildPath(kRootPath, 'base', 'src', 'app.php'))) {
+        require_once(gTransformUtils::BuildPath(kRootPath, 'base', 'src', 'app.php'));
 
-        if (gRegistryUtils::GetRegistryValue('app.path.0') == kSpecialComponent) {
-          gRegistryUtils::SetRegistryValue('app.component', kSpecialComponent);
+        if (gRegistryUtils::GetKey('app.path.0') == kSpecialComponent) {
+          gRegistryUtils::SetKey('app.component', kSpecialComponent);
         }
 
-        gAppUtils::LoadComponent(gRegistryUtils::GetRegistryValue('app.component'));
+        gAppUtils::LoadComponent(gRegistryUtils::GetKey('app.component'));
         gAppUtils::NotFound('PC LOAD LETTER');
       }
     }
@@ -281,10 +271,10 @@ class gAppUtils {
   *********************************************************************************************************************/
   public static function LoadComponent(string $aComponent) {
     if ($aComponent == kSpecialComponent) {
-      gConsoleUtils::SpecialComponent();
+      gAppUtils::SpecialComponent();
     }
 
-    $componentPath = gRegistryUtils::GetRegistryValue('constant.components' . kDot . $aComponent);
+    $componentPath = gRegistryUtils::GetKey('constant.components' . kDot . $aComponent);
 
     if (!$componentPath) {
       gAppUtils::NotFound('Unknown component.');
@@ -294,7 +284,7 @@ class gAppUtils {
       gAppUtils::NotFound('Failed to load the' . kSpace . $aComponent . kSpace .'component.');
     }
 
-    gRegistryUtils::SetRegistryValue('app.componentPath', gArrayStrUtils::BuildPath(ROOT_PATH, 'components', $aComponent));
+    gRegistryUtils::SetKey('app.componentPath', gTransformUtils::BuildPath(kRootPath, 'components', $aComponent));
     require_once($componentPath);
   }
 
@@ -303,7 +293,7 @@ class gAppUtils {
   *********************************************************************************************************************/
   public static function ReadFile(string $aFile) {
     $rv = @file_get_contents($aFile);
-    return gAppUtils::CheckValue($rv);
+    return gAppUtils::EnsureValue($rv);
   }
 
   /********************************************************************************************************************
@@ -338,10 +328,210 @@ class gAppUtils {
   }
 
   /********************************************************************************************************************
-  * Check if a value should be null according to Phoebus-legacy behavior.
+  * Check if a value should be null
   ********************************************************************************************************************/
-  public static function CheckValue($aValue, $aFallback = null) {
+  public static function EnsureValue($aValue, $aFallback = null) {
     return (empty($aValue) || $aValue === 'none') ? $aFallback : $aValue;
+  }
+
+  /**********************************************************************************************************************
+  * Special Component!
+  ***********************************************************************************************************************/
+  public static function SpecialComponent() {
+    $spCurrentPath = gRegistryUtils::GetKey('app.path');
+    $spPathCount = gRegistryUtils::GetKey('app.depth');
+
+    if ($spCurrentPath[0] != kSpecialComponent) {
+      gConsoleUtils::Redirect(kSlash . kSpecialComponent . kSlash);
+    }
+
+    gRegistryUtils::SetKey('app.component', kSpecialComponent);
+
+    if (gRegistryUtils::GetKey('constant.disableSpecialComponent')) {
+      gAppUtils::NotFound('The special component has been disabled.');
+    }
+
+    gRegistryUtils::SetKey('console.content.sectionName', kSpecialComponentName);
+
+    // The Special Component never has more than one level below it
+    // We still have to determine the root of the component though...
+    if ($spPathCount == 1) {
+      // URL /special/
+      $spSpecialFunction = 'root';
+    }
+    else {
+      // URL /special/xxx/
+      if ($spPathCount > 2) {
+        gAppUtils::NotFound('The special component only has one path level.');
+      }
+      $spSpecialFunction = $spCurrentPath[1];
+    }
+
+    $spCommandBar = array(
+      '/special/'                 => kSpecialComponentName,
+      '/special/test/'            => 'Test Cases',
+      '/special/vc/'              => 'Version Compare',
+      '/special/guid/'            => 'GUID',
+      '/special/hex/'             => 'Hex String',
+    );
+
+    gRegistryUtils::SetKey('console.content.commandbar', gRegistryUtils::GetKey('constant.components.site') ?
+                                               array_merge(kDefaultMenu, $spCommandBar) :
+                                               $spCommandBar);
+
+    unset($spCurrentPath, $spPathCount, $spCommandBar);
+
+    switch ($spSpecialFunction) {
+      case 'root':
+        $spContent = '<h2>Welcome</h2>' .
+                     '<p>Please select a special function from the command bar above.';
+        gConsoleUtils::Content($spContent, ['title' => 'Overview']);
+        break;
+      case 'test':
+        if (!gRegistryUtils::Debug()) {
+          gAppUtils::NotFound('This special function is not available when not in debug mode.');
+        }
+        $spCase = gRegistryUtils::GetKey('superglobal.get.case');
+        $spTestsPath = gTransformUtils::BuildPath(kRootPath, 'base', 'tests');
+        $spGlobTests = glob(gTransformUtils::BuildPath($spTestsPath, kAsterisk . gAppUtils::FILE_EXT['php']));
+        $spTests = kEmptyArray;
+
+        foreach ($spGlobTests as $_value) {
+          $spTests[] = gTransformUtils::Subst($_value, [gAppUtils::FILE_EXT['php'] => kEmptyString, $spTestsPath . kSlash => kEmptyString]);
+        }
+
+        if ($spCase) {
+          if (!gTransformUtils::Contains($spCase, $spTests)) {
+            gAppUtils::Error('Unknown test case.');
+          }
+
+          gRegistryUtils::SetKey('special.testCase', $spCase);
+          require_once(gTransformUtils::BuildPath($spTestsPath, $spCase . gAppUtils::FILE_EXT['php']));
+          headers_sent() ? exit() : gAppUtils::Error('The operation completed successfully.');
+        }
+
+        $spContent = kEmptyString;
+
+        foreach ($spTests as $_value) {
+          $spContent .= '<li><a href="/special/test/?case=' . $_value . '">' . $_value . '</a></li>';
+        }
+
+        $spContent = ($spContent == kEmptyString) ?
+                     '<p>There are no test cases.</p>' :
+                     '<h2>Please select a test case&hellip;</h2><ul>' . $spContent . '</ul>' . str_repeat('<br />', 3);
+
+        gConsoleUtils::Content($spContent, ['title' => 'Test Cases']);
+        break;
+      case 'vc':
+        $spCurrVer = gRegistryUtils::GetKey('superglobal.post.currVer');
+        $spCompVer = gRegistryUtils::GetKey('superglobal.post.compVer');
+
+        if ($spCurrVer && $spCompVer) {
+          gConsoleUtils::Content(gVersionCompare($spCurrVer, $spCompVer));
+        }
+
+        $spForm = '<form action="/special/vc/" method="post">Current Version:<br/><input type="text" name="currVer"><br/><br/>' .
+                  'Compare to Version:<br/><input type="text" name="compVer"><br/><br/><input type="submit"></form>';
+
+        gConsoleUtils::Content('<h2>nsIVersionComparator</h2>' . $spForm, ['title' => 'Runtime Status']);
+        break;
+      case 'guid':
+        gConsoleUtils::Content(gAppUtils::GlobalIdentifer(gRegistryUtils::GetKey('superglobal.get.vendor'), true),
+                 ['title' => 'Globally Unique Identifier (In XPIDL Notation)', 'textbox' => true]);
+        break;
+      case 'hex':
+        gConsoleUtils::Content(gAppUtils::HexString(gRegistryUtils::GetKey('superglobal.get.length', 40)),
+                 ['title' => 'Pseudo-Random Hex String', 'textbox' => true]);
+        break;
+      case 'system':
+        if (!gRegistryUtils::Debug()) {
+          gAppUtils::NotFound('This special function is not available when not in debug mode.');
+        }
+        self::Header('html', true);
+        phpinfo(INFO_GENERAL | INFO_CONFIGURATION | INFO_ENVIRONMENT | INFO_VARIABLES);
+        break;
+      default:
+        gAppUtils::NotFound('There is no matching case in the special component main switch.');
+    }
+
+    // We're done here
+    exit();
+  }
+  
+  /********************************************************************************************************************
+  * Access Super Globals
+  ********************************************************************************************************************/
+  public static function SuperGlobal($aNode, $aKey, $aDefault = null) {
+    $rv = null;
+
+    // Turn the variable type into all caps prefixed with an underscore
+    $aNode = kUnderbar . strtoupper($aNode);
+
+    // This handles the superglobals
+    switch($aNode) {
+      case '_CHECK':
+        $rv = gAppUtils::EnsureValue($aKey);
+        break;
+      case '_GET':
+        if (SAPI_IS_CLI && $GLOBALS['argc'] > 1) {
+          $args = kEmptyArray;
+
+          foreach (array_slice($GLOBALS['argv'], 1) as $_value) {
+            $arg = @explode('=', $_value);
+
+            if (count($arg) < 2) {
+              continue;
+            }
+
+            $attr = str_replace('--', kEmptyString, $arg[0]);
+            $val = gAppUtils::EnsureValue(str_replace('"', kEmptyString, $arg[1]));
+
+            if (!$attr && !$val) {
+              continue;
+            }
+
+            $args[$attr] = $val;
+          }
+
+          $rv = $args[$aKey] ?? $aDefault;
+          break;
+        }
+      case '_SERVER':
+      case '_ENV':
+      case '_FILES':
+      case '_POST':
+      case '_COOKIE':
+      case '_SESSION':
+        $rv = $GLOBALS[$aNode][$aKey] ?? $aDefault;
+        break;
+      default:
+        // We don't know WHAT was requested but it is obviously wrong...
+        gAppUtils::Error('Unknown system node.');
+    }
+    
+    // We always pass $_GET values through a general regular expression
+    // This allows only a-z A-Z 0-9 - / { } @ % whitespace and ,
+    if ($rv && $aNode == "_GET") {
+      $rv = preg_replace(gAppUtils::REGEX_PATTERNS['query'], kEmptyString, $rv);
+    }
+
+    // Files need special handling.. In principle we hard fail if it is anything other than
+    // OK or NO FILE
+    if ($rv && $aNode == "_FILES") {
+      if (!in_array($rv['error'], [UPLOAD_ERR_OK, UPLOAD_ERR_NO_FILE])) {
+        gAppUtils::Error('Upload of ' . $aKey . ' failed with error code: ' . $rv['error']);
+      }
+
+      // No file is handled as merely being null
+      if ($rv['error'] == UPLOAD_ERR_NO_FILE) {
+        return null;
+      }
+
+      // Cursory check the actual mime-type and replace whatever the web client sent
+      $rv['type'] = mime_content_type($rv['tmp_name']);
+    }
+    
+    return $rv;
   }
 
   /********************************************************************************************************************
@@ -359,17 +549,17 @@ class gAppUtils {
     foreach($aIncludes as $_key => $_value) { 
       switch ($aConst) {
         case 'COMPONENTS':
-          $includes[$_value] = gArrayStrUtils::BuildPath(ROOT_PATH, 'components', $_value, 'src', $_value . gAppUtils::FILE_EXT['php']);
+          $includes[$_value] = gTransformUtils::BuildPath(kRootPath, 'components', $_value, 'src', $_value . gAppUtils::FILE_EXT['php']);
           break;
         case 'MODULES':
-          $includes[$_value] = gArrayStrUtils::BuildPath(ROOT_PATH, 'modules', $_value . gAppUtils::FILE_EXT['php']);
+          $includes[$_value] = gTransformUtils::BuildPath(kRootPath, 'modules', $_value . gAppUtils::FILE_EXT['php']);
           break;
         case 'LIBRARIES':
           if (str_contains($_value, kDot . kDot)) {
             return;
           }
 
-          $includes[$_key] = gArrayStrUtils::BuildPath(ROOT_PATH, 'third_party', $_value);
+          $includes[$_key] = gTransformUtils::BuildPath(kRootPath, 'third_party', $_value);
           break;
         default:
           gfError('Unknown include type');
@@ -462,7 +652,7 @@ class gAppUtils {
   public static function PasswordVerify(string $aPassword, string $aHash) {
     // We can accept a pseudo-hash for clear text passwords in the format of $clrtxt$unix-epoch$clear-text-password
     if (str_starts_with($aHash, kDollar . self::PASSWORD_CLEARTEXT)) {
-      $password = gArrayStrUtils::ExplodeStr(kDollar, $aHash) ?? null;
+      $password = gTransformUtils::ExplodeStr(kDollar, $aHash) ?? null;
 
       if ($password == null || count($password) > 3) {
         gAppUtils::Error('Unable to "verify" this Clear Text "hashed" password.');
@@ -473,7 +663,7 @@ class gAppUtils {
 
     // We can also accept an Apache APR1-MD5 password that is commonly used in .htpasswd
     if (str_starts_with($aHash, kDollar . self::PASSWORD_HTACCESS)) {
-      $salt = gArrayStrUtils::ExplodeStr(kDollar, $aHash)[1] ?? null;
+      $salt = gTransformUtils::ExplodeStr(kDollar, $aHash)[1] ?? null;
 
       if(!$salt) {
         gAppUtils::Error('Unable to verify this Apache APR1-MD5 hashed password.');
@@ -572,7 +762,7 @@ class gAppUtils {
 
     // We want the GUID in XPIDL/C++ Header notation
     if ($aXPCOM) {
-      $explode = gArrayStrUtils::ExplodeStr(kDash, $guid);
+      $explode = gTransformUtils::ExplodeStr(kDash, $guid);
       $rv = "%{C++" . kNewLine . "//" . kSpace . kLeftBrace . $guid . kRightBrace . kNewLine .
             "#define NS_CHANGE_ME_IID" . kSpace . 
             vsprintf("{ 0x%s, 0x%s, 0x%s, { 0x%s, 0x%s, 0x%s, 0x%s, 0x%s, 0x%s, 0x%s, 0x%s } }",
@@ -595,9 +785,6 @@ class gAppUtils {
 
 // == | Static Registry Class | =======================================================================================
 
-// Define a global array to hold the registry
-$gRuntime = kEmptyArray;
-
 class gRegistryUtils {
   private static $sInited = false;
   private static $sStore = kEmptyArray;
@@ -619,26 +806,26 @@ class gRegistryUtils {
     }
 
     $domain = function($aHost, $aReturnSub = false) {
-      $host = gArrayStrUtils::ExplodeStr(kDot, $aHost);
+      $host = gTransformUtils::ExplodeStr(kDot, $aHost);
       return implode(kDot, $aReturnSub ? array_slice($host, 0, -2) : array_slice($host, -2, 2));
     };
 
-    $path = gArrayStrUtils::ExplodePath(self::SuperGlobal('get', 'path', kSlash));
+    $path = gTransformUtils::ExplodePath(gAppUtils::SuperGlobal('get', 'path', kSlash));
 
     self::$sStore = array(
       'app' => array(
-        'component'   => self::SuperGlobal('get', 'component', 'site'),
+        'component'   => gAppUtils::SuperGlobal('get', 'component', 'site'),
         'path'        => $path,
         'depth'       => count($path ?? kEmptyArray),
         'debug'       => kDebugMode,
-        'offline'     => file_exists(gArrayStrUtils::BuildPath(ROOT_PATH, '.offline')),
+        'offline'     => file_exists(gTransformUtils::BuildPath(kRootPath, '.offline')),
       ),
       'network' => array(
-        'scheme'      => self::SuperGlobal('server', 'SCHEME') ?? (self::SuperGlobal('server', 'HTTPS') ? 'https' : 'http'),
-        'baseDomain'  => $domain(self::SuperGlobal('server', 'SERVER_NAME', 'localhost')),
-        'subDomain'   => $domain(self::SuperGlobal('server', 'SERVER_NAME', 'localhost'), true),
-        'remoteAddr'  => self::SuperGlobal('server', 'HTTP_X_FORWARDED_FOR', self::SuperGlobal('server', 'REMOTE_ADDR', '127.0.0.1')),
-        'userAgent'   => self::SuperGlobal('server', 'HTTP_USER_AGENT', 'php' . kDash . PHP_SAPI . kSlash . PHP_VERSION),
+        'scheme'      => gAppUtils::SuperGlobal('server', 'SCHEME') ?? (gAppUtils::SuperGlobal('server', 'HTTPS') ? 'https' : 'http'),
+        'baseDomain'  => $domain(gAppUtils::SuperGlobal('server', 'SERVER_NAME', 'localhost')),
+        'subDomain'   => $domain(gAppUtils::SuperGlobal('server', 'SERVER_NAME', 'localhost'), true),
+        'remoteAddr'  => gAppUtils::SuperGlobal('server', 'HTTP_X_FORWARDED_FOR', gAppUtils::SuperGlobal('server', 'REMOTE_ADDR', '127.0.0.1')),
+        'userAgent'   => gAppUtils::SuperGlobal('server', 'HTTP_USER_AGENT', 'php' . kDash . PHP_SAPI . kSlash . PHP_VERSION),
       ),
       'console' => array(
         'output' => array(
@@ -660,8 +847,8 @@ class gRegistryUtils {
 
     if (defined('kDebugDomain') && !SAPI_IS_CLI) {
       self::$sStore['app']['debug'] =
-        (self::SuperGlobal('server', 'SERVER_NAME', 'localhost') != constant('kDebugDomain') ?? kEmptyString) ?
-        file_exists(gArrayStrUtils::BuildPath(ROOT_PATH, '.debugMode')) :
+        (gAppUtils::SuperGlobal('server', 'SERVER_NAME', 'localhost') != constant('kDebugDomain') ?? kEmptyString) ?
+        file_exists(gTransformUtils::BuildPath(kRootPath, '.debugMode')) :
         !kDebugMode;
     }
 
@@ -672,7 +859,7 @@ class gRegistryUtils {
   * Get the registry property and return it
   ********************************************************************************************************************/
   public static function Component(?string $aCompareComponent = null) {
-    $rv = (self::$sInited) ? self::GetRegistryValue('app.component') : self::SuperGlobal('get', 'component', 'site');
+    $rv = (self::$sInited) ? self::GetKey('app.component') : gAppUtils::SuperGlobal('get', 'component', 'site');
 
     if ($aCompareComponent) {
       $rv = ($rv === $aCompareComponent);
@@ -684,8 +871,8 @@ class gRegistryUtils {
   /********************************************************************************************************************
   * Get the registry property and return it
   ********************************************************************************************************************/
-  public static function debug() {
-    return (self::$sInited) ? self::GetRegistryValue('app.debug') : kDebugMode;
+  public static function Debug() {
+    return (self::$sInited) ? self::GetKey('app.debug') : kDebugMode;
   }
 
   /********************************************************************************************************************
@@ -698,12 +885,12 @@ class gRegistryUtils {
   /********************************************************************************************************************
   * Get the value of a dotted key from the registry property except for virtual regnodes
   ********************************************************************************************************************/
-  public static function GetRegistryValue(string $aKey, $aDefault = null) {
+  public static function GetKey(string $aKey, $aDefault = null) {
     if ($aKey == kEmptyString) {
       return null;
     }
 
-    $keys = gArrayStrUtils::ExplodeStr(kDot, $aKey);
+    $keys = gTransformUtils::ExplodeStr(kDot, $aKey);
 
     if (in_array($keys[0] ?? kEmptyString, self::$sRemap)) {
       switch ($keys[0] ?? kEmptyString) {
@@ -734,21 +921,21 @@ class gRegistryUtils {
           }
 
           unset($keys[0], $keys[1]);
-          $rv = \Illuminate\Support\Arr::get($rv, gAppUtils::CheckValue(implode(kDot, $keys)), $aDefault);
+          $rv = \Illuminate\Support\Arr::get($rv, gAppUtils::EnsureValue(implode(kDot, $keys)), $aDefault);
           break;
         case 'superglobal':
           if (count($keys) < 3) {
             return null;
           }
 
-          $rv = self::SuperGlobal($keys[1], $keys[2]);
+          $rv = gAppUtils::SuperGlobal($keys[1], $keys[2]);
 
           if (!Illuminate\Support\Arr::accessible($rv)) {
             return $rv ?? $aDefault;
           }
 
           unset($keys[0], $keys[1]);
-          $rv = \Illuminate\Support\Arr::get($rv, gAppUtils::CheckValue(implode(kDot, $keys)), $aDefault);
+          $rv = \Illuminate\Support\Arr::get($rv, gAppUtils::EnsureValue(implode(kDot, $keys)), $aDefault);
           break;
         default:
           if (count($keys) < 2 || str_starts_with($keys[1], kUnderbar)) {
@@ -756,7 +943,7 @@ class gRegistryUtils {
           }
 
           unset($keys[0]);
-          $rv = \Illuminate\Support\Arr::get($GLOBALS, gAppUtils::CheckValue(implode(kDot, $keys)), $aDefault);
+          $rv = \Illuminate\Support\Arr::get($GLOBALS, gAppUtils::EnsureValue(implode(kDot, $keys)), $aDefault);
       }
     }
     else {
@@ -769,14 +956,14 @@ class gRegistryUtils {
   /********************************************************************************************************************
   * Set the value of a dotted key from the registry property
   ********************************************************************************************************************/
-  public static function SetRegistryValue(string $aKey, string|int|bool|array|null $aValue) {
-    if (in_array(gArrayStrUtils::ExplodeStr(kDot, $aKey)[0] ?? kEmptyString, self::$sRemap)) {
+  public static function SetKey(string $aKey, string|int|bool|array|null $aValue) {
+    if (in_array(gTransformUtils::ExplodeStr(kDot, $aKey)[0] ?? kEmptyString, self::$sRemap)) {
       gAppUtils::Error('Setting values on virtual nodes is not supported.');
     }
 
-    if (gArrayStrUtils::Contains($aKey, '[]', -1)) {
+    if (gTransformUtils::Contains($aKey, '[]', -1)) {
       $aKey = substr($aKey, 0, -2);
-      $value = gRegistryUtils::GetRegistryValue($aKey, kEmptyArray);
+      $value = gRegistryUtils::GetKey($aKey, kEmptyArray);
 
       if (!is_array($value)) {
         $value = [$value];
@@ -787,82 +974,6 @@ class gRegistryUtils {
     }
 
     return \Illuminate\Support\Arr::set(self::$sStore, $aKey, $aValue);
-  }
-
-  /********************************************************************************************************************
-  * Access Super Globals
-  ********************************************************************************************************************/
-  public static function SuperGlobal($aNode, $aKey, $aDefault = null) {
-    $rv = null;
-
-    // Turn the variable type into all caps prefixed with an underscore
-    $aNode = kUnderbar . strtoupper($aNode);
-
-    // This handles the superglobals
-    switch($aNode) {
-      case '_CHECK':
-        $rv = gAppUtils::CheckValue($aKey);
-        break;
-      case '_GET':
-        if (SAPI_IS_CLI && $GLOBALS['argc'] > 1) {
-          $args = kEmptyArray;
-
-          foreach (array_slice($GLOBALS['argv'], 1) as $_value) {
-            $arg = @explode('=', $_value);
-
-            if (count($arg) < 2) {
-              continue;
-            }
-
-            $attr = str_replace('--', kEmptyString, $arg[0]);
-            $val = gAppUtils::CheckValue(str_replace('"', kEmptyString, $arg[1]));
-
-            if (!$attr && !$val) {
-              continue;
-            }
-
-            $args[$attr] = $val;
-          }
-
-          $rv = $args[$aKey] ?? $aDefault;
-          break;
-        }
-      case '_SERVER':
-      case '_ENV':
-      case '_FILES':
-      case '_POST':
-      case '_COOKIE':
-      case '_SESSION':
-        $rv = $GLOBALS[$aNode][$aKey] ?? $aDefault;
-        break;
-      default:
-        // We don't know WHAT was requested but it is obviously wrong...
-        gAppUtils::Error('Unknown system node.');
-    }
-    
-    // We always pass $_GET values through a general regular expression
-    // This allows only a-z A-Z 0-9 - / { } @ % whitespace and ,
-    if ($rv && $aNode == "_GET") {
-      $rv = preg_replace(gAppUtils::REGEX_PATTERNS['query'], kEmptyString, $rv);
-    }
-
-    // Files need special handling.. In principle we hard fail if it is anything other than
-    // OK or NO FILE
-    if ($rv && $aNode == "_FILES") {
-      if (!in_array($rv['error'], [UPLOAD_ERR_OK, UPLOAD_ERR_NO_FILE])) {
-        gAppUtils::Error('Upload of ' . $aKey . ' failed with error code: ' . $rv['error']);
-      }
-
-      // No file is handled as merely being null
-      if ($rv['error'] == UPLOAD_ERR_NO_FILE) {
-        return null;
-      }
-
-      // Cursory check the actual mime-type and replace whatever the web client sent
-      $rv['type'] = mime_content_type($rv['tmp_name']);
-    }
-    
-    return $rv;
   }
 }
 
@@ -905,11 +1016,11 @@ class gErrorUtils {
   * Output details about a failure condition
   ******************************************************************************************************************/
   public static function report(array $aMetadata) {
-    if (gRegistryUtils::Debug() && gRegistryUtils::SuperGlobal('get', 'runtime')) {
+    if (gRegistryUtils::Debug() && gAppUtils::SuperGlobal('get', 'runtime')) {
       gConsoleUtils::Output((self::kPhpErrorCodes[$aMetadata['code']] ?? self::kPhpErrorCodes[E_ALL]) . kSpaceDashSpace . $aMetadata['message']);
     }
 
-    $traceline = fn($eFile, $eLine) => str_replace(ROOT_PATH, kEmptyString, $eFile) . kColon . $eLine;
+    $traceline = fn($eFile, $eLine) => str_replace(kRootPath, kEmptyString, $eFile) . kColon . $eLine;
     $functions = ['phpErrorHandler', 'phpExceptionHandler', 'trigger_error'];
     $trace = ($aMetadata['file'] && $aMetadata['line']) ? [$traceline($aMetadata['file'], $aMetadata['line'])] : kEmptyArray;
 
@@ -938,14 +1049,14 @@ class gErrorUtils {
 
       $commandBar = ['onclick="history.back()"' => 'Go Back'];
 
-      if (gRegistryUtils::Component(kSpecialComponent) || !gRegistryUtils::GetRegistryValue('constant.components.site')) {
-        gRegistryUtils::SetRegistryValue('console.content.commandbar', array_merge($commandBar, ['/special/' => kSpecialComponentName]));
+      if (gRegistryUtils::Component(kSpecialComponent) || !gRegistryUtils::GetKey('constant.components.site')) {
+        gRegistryUtils::SetKey('console.content.commandbar', array_merge($commandBar, ['/special/' => kSpecialComponentName]));
       }
       else {
-        gRegistryUtils::SetRegistryValue('console.content.commandbar', array_merge($commandBar, kDefaultMenu));
+        gRegistryUtils::SetKey('console.content.commandbar', array_merge($commandBar, kDefaultMenu));
       }
 
-      gRegistryUtils::SetRegistryValue('console.content.sectionName', kEmptyString);
+      gRegistryUtils::SetKey('console.content.sectionName', kEmptyString);
       gConsoleUtils::Content($content, ['title' => $title, 'statustext' => 'Please contact a system administrator.']);
     }
 
@@ -983,7 +1094,7 @@ class gConsoleUtils {
     501                       => 'HTTP/1.1 501 Not Implemented',
   );
 
-  const kStatusCodes = array(
+  const HTTP_STATUS_CODE = array(
     200       => 'OK',
     204       => 'No Content',
     400       => 'Bad Request',
@@ -1001,7 +1112,7 @@ class gConsoleUtils {
     503       => 'Service Unavailable',
   );
 
-  const kMimeTypes = array(
+  const MIME_TYPES = array(
     'text'    => 'text/plain',
     'html'    => 'text/html',
     'rdf'     => 'text/rdf',
@@ -1028,7 +1139,7 @@ class gConsoleUtils {
   * @param $aHeader    Short name of header
   **********************************************************************************************************************/
   public static function Header(string|int $aHeader, bool $aSendAllOnContentType = false) { 
-    if (is_int($aHeader) && gArrayStrUtils::Contains(self::kStatusCodes, $aHeader, 1)) {
+    if (is_int($aHeader) && gTransformUtils::Contains(self::HTTP_STATUS_CODE, $aHeader, 1)) {
       self::HttpStatusCode($aHeader);
       
       if ($aHeader < 400) {
@@ -1040,7 +1151,7 @@ class gConsoleUtils {
       }
     }
 
-    if (gArrayStrUtils::Contains(self::kMimeTypes, $aHeader, 1)) {
+    if (gTransformUtils::Contains(self::MIME_TYPES, $aHeader, 1)) {
       self::ContentType($aHeader);
 
       if ($aSendAllOnContentType) {
@@ -1051,18 +1162,18 @@ class gConsoleUtils {
       }
     }
 
-    return gRegistryUtils::SetRegistryValue('console.output.httpHeaders[]', $aHeader);
+    return gRegistryUtils::SetKey('console.output.httpHeaders[]', $aHeader);
   }
 
   /********************************************************************************************************************
   * Gets or sets the "default" content type so we don't have to output the header ourselves in most cases.
   ********************************************************************************************************************/
   public static function SendHeaders() {
-    $responseCode = gRegistryUtils::GetRegistryValue('console.output.responseCode', 200);
-    gRegistryUtils::SetRegistryValue('console.output.httpHeaders[]', 'Content-type'. kColon . kSpace . gRegistryUtils::GetRegistryValue('console.output.contentType'));
-    gRegistryUtils::SetRegistryValue('console.output.httpHeaders[]', 'HTTP/1.1' . kSpace . $responseCode . kSpace . self::kStatusCodes[$responseCode]);
+    $responseCode = gRegistryUtils::GetKey('console.output.responseCode', 200);
+    gRegistryUtils::SetKey('console.output.httpHeaders[]', 'Content-type'. kColon . kSpace . gRegistryUtils::GetKey('console.output.contentType'));
+    gRegistryUtils::SetKey('console.output.httpHeaders[]', 'HTTP/1.1' . kSpace . $responseCode . kSpace . self::HTTP_STATUS_CODE[$responseCode]);
 
-    $headers = gRegistryUtils::GetRegistryValue('console.output.httpHeaders', kEmptyArray);
+    $headers = gRegistryUtils::GetKey('console.output.httpHeaders', kEmptyArray);
 
     foreach ($headers as $_value) {
       header(trim($_value), true);
@@ -1074,11 +1185,11 @@ class gConsoleUtils {
   ********************************************************************************************************************/
   public static function HttpStatusCode(?string $aStatusCode = null) {
     if (!$aStatusCode) {
-      gRegistryUtils::GetRegistryValue('console.output.responseCode', 200);
+      gRegistryUtils::GetKey('console.output.responseCode', 200);
     }
 
-    if (gArrayStrUtils::Contains(self::kStatusCodes, $aStatusCode, 1)) {
-      gRegistryUtils::SetRegistryValue('console.output.responseCode', $aStatusCode);
+    if (gTransformUtils::Contains(self::HTTP_STATUS_CODE, $aStatusCode, 1)) {
+      gRegistryUtils::SetKey('console.output.responseCode', $aStatusCode);
     }
   }
 
@@ -1087,11 +1198,11 @@ class gConsoleUtils {
   ********************************************************************************************************************/
   public static function ContentType(?string $aContentType = null) {
      if ($aContentType === null) {
-      return gRegistryUtils::GetRegistryValue('console.output.contentType');
+      return gRegistryUtils::GetKey('console.output.contentType');
     }
 
-    if (gArrayStrUtils::Contains(self::kMimeTypes, $aContentType, 1)) {
-      return gRegistryUtils::SetRegistryValue('console.output.contentType', self::kMimeTypes[$aContentType]);
+    if (gTransformUtils::Contains(self::MIME_TYPES, $aContentType, 1)) {
+      return gRegistryUtils::SetKey('console.output.contentType', self::MIME_TYPES[$aContentType]);
     }
   }
 
@@ -1106,13 +1217,13 @@ class gConsoleUtils {
   * Get a subdomain or base domain from a host
   *
   * @dep kDot
-  * @dep gArrayStrUtils::ExplodeStr()
+  * @dep gTransformUtils::ExplodeStr()
   * @param $aHost       Hostname
   * @param $aReturnSub  Should return subdmain
   * @returns            domain or subdomain
   ***********************************************************************************************************************/
   public static function GetDomain(string $aHost, ?bool $aReturnSub = null) {
-    $host = gArrayStrUtils::ExplodeStr(kDot, $aHost);
+    $host = gTransformUtils::ExplodeStr(kDot, $aHost);
     return implode(kDot, $aReturnSub ? array_slice($host, 0, -2) : array_slice($host, -2, 2));
   }
 
@@ -1127,7 +1238,7 @@ class gConsoleUtils {
   public static function Output(mixed $aContent, ?string $aHeader = 'text') {
     $content = null;
 
-    if (gRegistryUtils::Debug() && gRegistryUtils::SuperGlobal('get', 'runtime')) {
+    if (gRegistryUtils::Debug() && gAppUtils::SuperGlobal('get', 'runtime')) {
       $content = array_merge(gRegistryUtils::GetStore(), ['superglobal' => $GLOBALS]);
       $content['console']['output']['responseBody'] = $aContent;
       $content = json_encode($content, gAppUtils::JSON_ENCODE_FLAGS['display']);
@@ -1177,8 +1288,8 @@ class gConsoleUtils {
   * Basic Site Content Generation using a Special Template
   ******************************************************************************************************************/
   public static function Content(mixed $aContent, array $aMetadata = kEmptyArray) {
-    $template = SAPI_IS_CLI ? false : gAppUtils::ReadFile(gArrayStrUtils::BuildPath(ROOT_PATH, 'base', 'skin', 'template.xhtml'));
-    $stylesheet = SAPI_IS_CLI ? false : gAppUtils::ReadFile(gArrayStrUtils::BuildPath(ROOT_PATH, 'base', 'skin', 'stylesheet.css'));
+    $template = SAPI_IS_CLI ? false : gAppUtils::ReadFile(gTransformUtils::BuildPath(kRootPath, 'base', 'skin', 'template.xhtml'));
+    $stylesheet = SAPI_IS_CLI ? false : gAppUtils::ReadFile(gTransformUtils::BuildPath(kRootPath, 'base', 'skin', 'stylesheet.css'));
 
     if (!$template) {
       gConsoleUtils::Output(['content' => $aContent, 'title' => $aMetadata['title'] ?? 'Output']);
@@ -1194,7 +1305,7 @@ class gConsoleUtils {
       $rv = kEmptyString;
 
       foreach ($aMenu as $_key => $_value) {
-        if (gArrayStrUtils::Contains($_key, 'onclick=', 1)) {
+        if (gTransformUtils::Contains($_key, 'onclick=', 1)) {
           $rv .= '<li><a href="#"' . kSpace . $_key . '>' . $_value . '</a></li>';
         }
         else {
@@ -1206,7 +1317,7 @@ class gConsoleUtils {
     };
 
     if ((is_string($content) || is_int($content)) && !$metadata('textbox') && !$metadata('iframe')) {
-      if (!gArrayStrUtils::Contains($content, ['<p', '<ul', '<ol', '<h1', '<h2', '<h3', '<table'])) {
+      if (!gTransformUtils::Contains($content, ['<p', '<ul', '<ol', '<h1', '<h2', '<h3', '<table'])) {
         $content = '<p>' . $content . '</p>';
       }
     }
@@ -1219,158 +1330,34 @@ class gConsoleUtils {
       $content = '<form><textarea class="special-textbox" name="content" rows="30" readonly>' . $content . '</textarea></form>';
     }
 
-    $siteName = gRegistryUtils::GetRegistryValue('console.content.siteName', kAppName);
-    $sectionName = gRegistryUtils::GetRegistryValue('console.content.sectionName', kEmptyString);
+    $siteName = gRegistryUtils::GetKey('console.content.siteName', kAppName);
+    $sectionName = gRegistryUtils::GetKey('console.content.sectionName', kEmptyString);
 
     if ($sectionName) {
       $siteName = $sectionName . kSpaceDashSpace . $siteName;
     }
 
-    $isTestCase = (!$metadata('title') && gRegistryUtils::GetRegistryValue('special.testCase') && gRegistryUtils::Component(kSpecialComponent));
+    $isTestCase = (!$metadata('title') && gRegistryUtils::GetKey('special.testCase') && gRegistryUtils::Component(kSpecialComponent));
 
     $substs = array(
       '{$SITE_STYLESHEET}'  => $stylesheet ?? kEmptyString,
       '{$PAGE_CONTENT}'     => $content,
-      '{$SITE_DOMAIN}'      => gRegistryUtils::SuperGlobal('server', 'SERVER_NAME'),
+      '{$SITE_DOMAIN}'      => gAppUtils::SuperGlobal('server', 'SERVER_NAME'),
       '{$SITE_NAME}'        => $siteName,
-      '{$SITE_MENU}'        => $menuize(gRegistryUtils::GetRegistryValue('console.content.commandbar')),
+      '{$SITE_MENU}'        => $menuize(gRegistryUtils::GetKey('console.content.commandbar')),
       '{$SITE_SECTION}'     => $sectionName ?? kEmptyString,
-      '{$PAGE_TITLE}'       => $isTestCase ? '[Test]' . kSpace . gRegistryUtils::GetRegistryValue('special.testCase') : ($metadata('title') ?? 'Output'),
-      '{$PAGE_STATUS}'      => $metadata('statustext') ?? gRegistryUtils::GetRegistryValue('console.content.statustext'),
-      '{$SKIN_PATH}'        => gArrayStrUtils::BuildPath(kSlash, 'base', 'skin'),
+      '{$PAGE_TITLE}'       => $isTestCase ? '[Test]' . kSpace . gRegistryUtils::GetKey('special.testCase') : ($metadata('title') ?? 'Output'),
+      '{$PAGE_STATUS}'      => $metadata('statustext') ?? gRegistryUtils::GetKey('console.content.statustext'),
+      '{$SKIN_PATH}'        => gTransformUtils::BuildPath(kSlash, 'base', 'skin'),
       '{$SOFTWARE_VENDOR}'  => kAppVendor,
       '{$SOFTWARE_NAME}'    => kAppName,
       '{$SOFTWARE_VERSION}' => kAppVersion,
     );
 
-    $content = gArrayStrUtils::Subst($template, $substs);
+    $content = gTransformUtils::Subst($template, $substs);
 
     @ob_end_clean();
     gConsoleUtils::Output($content, 'html');
-  }
-
-  /**********************************************************************************************************************
-  * Special Component!
-  ***********************************************************************************************************************/
-  public static function SpecialComponent() {
-    $spCurrentPath = gRegistryUtils::GetRegistryValue('app.path');
-    $spPathCount = gRegistryUtils::GetRegistryValue('app.depth');
-
-    if ($spCurrentPath[0] != kSpecialComponent) {
-      gConsoleUtils::Redirect(kSlash . kSpecialComponent . kSlash);
-    }
-
-    gRegistryUtils::SetRegistryValue('app.component', kSpecialComponent);
-
-    if (gRegistryUtils::GetRegistryValue('constant.disableSpecialComponent')) {
-      gAppUtils::NotFound('The special component has been disabled.');
-    }
-
-    gRegistryUtils::SetRegistryValue('console.content.sectionName', kSpecialComponentName);
-
-    // The Special Component never has more than one level below it
-    // We still have to determine the root of the component though...
-    if ($spPathCount == 1) {
-      // URL /special/
-      $spSpecialFunction = 'root';
-    }
-    else {
-      // URL /special/xxx/
-      if ($spPathCount > 2) {
-        gAppUtils::NotFound('The special component only has one path level.');
-      }
-      $spSpecialFunction = $spCurrentPath[1];
-    }
-
-    $spCommandBar = array(
-      '/special/'                 => kSpecialComponentName,
-      '/special/test/'            => 'Test Cases',
-      '/special/vc/'              => 'Version Compare',
-      '/special/guid/'            => 'GUID',
-      '/special/hex/'             => 'Hex String',
-    );
-
-    gRegistryUtils::SetRegistryValue('console.content.commandbar', gRegistryUtils::GetRegistryValue('constant.components.site') ?
-                                               array_merge(kDefaultMenu, $spCommandBar) :
-                                               $spCommandBar);
-
-    unset($spCurrentPath, $spPathCount, $spCommandBar);
-
-    switch ($spSpecialFunction) {
-      case 'root':
-        $spContent = '<h2>Welcome</h2>' .
-                     '<p>Please select a special function from the command bar above.';
-        gConsoleUtils::Content($spContent, ['title' => 'Overview']);
-        break;
-      case 'test':
-        if (!gRegistryUtils::Debug()) {
-          gAppUtils::NotFound('This special function is not available when not in debug mode.');
-        }
-        $spCase = gRegistryUtils::GetRegistryValue('superglobal.get.case');
-        $spTestsPath = gArrayStrUtils::BuildPath(ROOT_PATH, 'base', 'tests');
-        $spGlobTests = glob(gArrayStrUtils::BuildPath($spTestsPath, kAsterisk . gAppUtils::FILE_EXT['php']));
-        $spTests = kEmptyArray;
-
-        foreach ($spGlobTests as $_value) {
-          $spTests[] = gArrayStrUtils::Subst($_value, [gAppUtils::FILE_EXT['php'] => kEmptyString, $spTestsPath . kSlash => kEmptyString]);
-        }
-
-        if ($spCase) {
-          if (!gArrayStrUtils::Contains($spCase, $spTests)) {
-            gAppUtils::Error('Unknown test case.');
-          }
-
-          gRegistryUtils::SetRegistryValue('special.testCase', $spCase);
-          require_once(gArrayStrUtils::BuildPath($spTestsPath, $spCase . gAppUtils::FILE_EXT['php']));
-          headers_sent() ? exit() : gAppUtils::Error('The operation completed successfully.');
-        }
-
-        $spContent = kEmptyString;
-
-        foreach ($spTests as $_value) {
-          $spContent .= '<li><a href="/special/test/?case=' . $_value . '">' . $_value . '</a></li>';
-        }
-
-        $spContent = ($spContent == kEmptyString) ?
-                     '<p>There are no test cases.</p>' :
-                     '<h2>Please select a test case&hellip;</h2><ul>' . $spContent . '</ul>' . str_repeat('<br />', 3);
-
-        gConsoleUtils::Content($spContent, ['title' => 'Test Cases']);
-        break;
-      case 'vc':
-        $spCurrVer = gRegistryUtils::GetRegistryValue('superglobal.post.currVer');
-        $spCompVer = gRegistryUtils::GetRegistryValue('superglobal.post.compVer');
-
-        if ($spCurrVer && $spCompVer) {
-          gConsoleUtils::Content(gVersionCompare($spCurrVer, $spCompVer));
-        }
-
-        $spForm = '<form action="/special/vc/" method="post">Current Version:<br/><input type="text" name="currVer"><br/><br/>' .
-                  'Compare to Version:<br/><input type="text" name="compVer"><br/><br/><input type="submit"></form>';
-
-        gConsoleUtils::Content('<h2>nsIVersionComparator</h2>' . $spForm, ['title' => 'Runtime Status']);
-        break;
-      case 'guid':
-        gConsoleUtils::Content(gAppUtils::GlobalIdentifer(gRegistryUtils::GetRegistryValue('superglobal.get.vendor'), true),
-                 ['title' => 'Globally Unique Identifier (In XPIDL Notation)', 'textbox' => true]);
-        break;
-      case 'hex':
-        gConsoleUtils::Content(gAppUtils::HexString(gRegistryUtils::GetRegistryValue('superglobal.get.length', 40)),
-                 ['title' => 'Pseudo-Random Hex String', 'textbox' => true]);
-        break;
-      case 'system':
-        if (!gRegistryUtils::Debug()) {
-          gAppUtils::NotFound('This special function is not available when not in debug mode.');
-        }
-        self::Header('html', true);
-        phpinfo(INFO_GENERAL | INFO_CONFIGURATION | INFO_ENVIRONMENT | INFO_VARIABLES);
-        break;
-      default:
-        gAppUtils::NotFound('There is no matching case in the special component main switch.');
-    }
-
-    // We're done here
-    exit();
   }
 
   /**********************************************************************************************************************
@@ -1395,7 +1382,7 @@ class gConsoleUtils {
 
         // Properly handle content using XML and not try and be lazy.. It almost never works!
         if (array_key_exists('@content', $aData) && is_string($aData['@content'])) {
-          if (gArrayStrUtils::Contains($aData['@content'], ["<", ">", "?", "&", "'", "\""])) {
+          if (gTransformUtils::Contains($aData['@content'], ["<", ">", "?", "&", "'", "\""])) {
             $content = $dom->createCDATASection($aData['@content'] ?? kEmptyString);
           }
           else {
@@ -1453,9 +1440,9 @@ class gConsoleUtils {
 
 // == | Static String Class | =========================================================================================
 
-class gArrayStrUtils {
+class gTransformUtils {
   /**********************************************************************************************************************
-  * gArrayStrUtils::Subst
+  * gTransformUtils::Subst
   ***********************************************************************************************************************/
   public static function Subst(string $aString, array $aSubsts, bool $aRegEx = false) {
     $rv = $aString;
@@ -1469,7 +1456,7 @@ class gArrayStrUtils {
   } 
     
   /**********************************************************************************************************************
-  * gArrayStrUtils::SubstEx
+  * gTransformUtils::SubstEx
   ***********************************************************************************************************************/
   public static function SubstEx(string $aString, ...$aSubsts) {
     $keyPrefix = kLeftBrace;
@@ -1491,7 +1478,7 @@ class gArrayStrUtils {
   }
 
   /**********************************************************************************************************************
-  * gArrayStrUtils::Contains
+  * gTransformUtils::Contains
   ***********************************************************************************************************************/
   public static function Contains(string|array $aHaystack, string|array $aNeedle, int $aPos = 0) {
     $rv = false;
@@ -1526,7 +1513,7 @@ class gArrayStrUtils {
   }
 
   /**********************************************************************************************************************
-  * gArrayStrUtils::ExplodeStr
+  * gTransformUtils::ExplodeStr
   ***********************************************************************************************************************/
   public static function ExplodeStr(string $aSeparator, string $aString) {
     return (!str_contains($aString, $aSeparator)) ? [$aString] :
@@ -1541,7 +1528,7 @@ class gArrayStrUtils {
   }
 
   /**********************************************************************************************************************
-  * gArrayStrUtils::BuildPath
+  * gTransformUtils::BuildPath
   ***********************************************************************************************************************/
   public static function BuildPath(...$aParts) {
     $parts = kEmptyArray;
@@ -1577,7 +1564,7 @@ class gArrayStrUtils {
   }
 
   /**********************************************************************************************************************
-  * gArrayStrUtils::StripStr
+  * gTransformUtils::StripStr
   ***********************************************************************************************************************/
   public static function StripStr (string $aStr, string $aStrip = kEmptyString) {
     return str_replace($aStrip, kEmptyString, $aStr);
@@ -1587,7 +1574,9 @@ class gArrayStrUtils {
 } // ==================================================================================================================
 // ====================================================================================================================
 
+//=====================================================================================================================
 namespace mozilla\vc { // == | nsIVersionComparator | =================================================================
+// ====================================================================================================================
 
 /**
 * Implements Mozilla Toolkit's nsIVersionComparator
@@ -1781,9 +1770,745 @@ class ToolkitVersionPartTokenizer {
   public function getRemainder() { return $this->part; }
 }
 
+// ====================================================================================================================
 } // ==================================================================================================================
+// ====================================================================================================================
 
+//=====================================================================================================================
+namespace Adbar { // == | ArrayUtils | ===================================================================
+// ====================================================================================================================
+
+use Countable;
+use ArrayAccess;
+use ArrayIterator;
+use JsonSerializable;
+use IteratorAggregate;
+use Traversable;
+
+/**
+ * Dot
+ *
+ * This class provides a dot notation access and helper functions for
+ * working with arrays of data. Inspired by Laravel Collection.
+ *
+ * @template TKey of array-key
+ * @template TValue mixed
+ *
+ * @implements \ArrayAccess<TKey, TValue>
+ * @implements \IteratorAggregate<TKey, TValue>
+ */
+class Dot implements ArrayAccess, Countable, IteratorAggregate, JsonSerializable
+{
+  /**
+   * The stored items
+   *
+   * @var array<TKey, TValue>
+   */
+  protected $items = [];
+
+  /**
+   * The character to use as a delimiter, defaults to dot (.)
+   *
+   * @var non-empty-string
+   */
+  protected $delimiter = ".";
+
+  // ====
+
+  /**
+   * Create a new Dot instance
+   *
+   * @param  mixed  $items
+   * @param  bool  $parse
+   * @param  non-empty-string  $delimiter
+   * @return void
+   */
+  public function __construct($items = [], $parse = false, $delimiter = ".")
+  {
+    $items = $this->getArrayItems($items);
+
+    $this->delimiter = $delimiter ?: ".";
+
+    if ($parse) {
+      $this->set($items);
+    } else {
+      $this->items = $items;
+    }
+  }
+
+  // ====
+
+  /**
+   * Set a given key / value pair or pairs
+   * if the key doesn't exist already
+   *
+   * @param  array<TKey, TValue>|int|string  $keys
+   * @param  mixed  $value
+   * @return $this
+   */
+  public function add($keys, $value = null)
+  {
+    if (is_array($keys)) {
+      foreach ($keys as $key => $value) {
+        $this->add($key, $value);
+      }
+    } elseif ($this->get($keys) === null) {
+      $this->set($keys, $value);
+    }
+
+    return $this;
+  }
+
+  // ====
+
+  /**
+   * Return all the stored items
+   *
+   * @return array<TKey, TValue>
+   */
+  public function all()
+  {
+    return $this->items;
+  }
+
+  // ====
+
+  /**
+   * Delete the contents of a given key or keys
+   *
+   * @param  array<TKey>|int|string|null  $keys
+   * @return $this
+   */
+  public function clear($keys = null)
+  {
+    if ($keys === null) {
+      $this->items = [];
+
+      return $this;
+    }
+
+    $keys = (array) $keys;
+
+    foreach ($keys as $key) {
+      $this->set($key, []);
+    }
+
+    return $this;
+  }
+
+  // ====
+
+  /**
+   * Delete the given key or keys
+   *
+   * @param  array<TKey>|array<TKey, TValue>|int|string  $keys
+   * @return $this
+   */
+  public function delete($keys)
+  {
+    $keys = (array) $keys;
+
+    foreach ($keys as $key) {
+      if ($this->exists($this->items, $key)) {
+        unset($this->items[$key]);
+
+        continue;
+      }
+
+      $items = &$this->items;
+      $segments = explode($this->delimiter, $key);
+      $lastSegment = array_pop($segments);
+
+      foreach ($segments as $segment) {
+        if (!isset($items[$segment]) || !is_array($items[$segment])) {
+          continue 2;
+        }
+
+        $items = &$items[$segment];
+      }
+
+      unset($items[$lastSegment]);
+    }
+
+    return $this;
+  }
+
+  // ====
+
+  /**
+   * Checks if the given key exists in the provided array.
+   *
+   * @param  array<TKey, TValue>  $array Array to validate
+   * @param  int|string  $key  The key to look for
+   * @return bool
+   */
+  protected function exists($array, $key)
+  {
+    return array_key_exists($key, $array);
+  }
+
+  // ====
+
+  /**
+   * Flatten an array with the given character as a key delimiter
+   *
+   * @param  string  $delimiter
+   * @param  mixed  $items
+   * @param  string  $prepend
+   * @return array<TKey, TValue>
+   */
+  public function flatten($delimiter = '.', $items = null, $prepend = '')
+  {
+    $flatten = [];
+
+    if ($items === null) {
+      $items = $this->items;
+    }
+
+    foreach ($items as $key => $value) {
+      if (is_array($value) && !empty($value)) {
+        $flatten[] = $this->flatten($delimiter, $value, $prepend . $key . $delimiter);
+      } else {
+        $flatten[] = [$prepend . $key => $value];
+      }
+    }
+
+    return array_merge(...$flatten);
+  }
+
+  // ====
+
+  /**
+   * Return the value of a given key
+   *
+   * @param  int|string|null  $key
+   * @param  mixed  $default
+   * @return mixed
+   */
+  public function get($key = null, $default = null)
+  {
+    if ($key === null) {
+      return $this->items;
+    }
+
+    if ($this->exists($this->items, $key)) {
+      return $this->items[$key];
+    }
+
+    if (!is_string($key) || strpos($key, $this->delimiter) === false) {
+      return $default;
+    }
+
+    $items = $this->items;
+
+    foreach (explode($this->delimiter, $key) as $segment) {
+      if (!is_array($items) || !$this->exists($items, $segment)) {
+        return $default;
+      }
+
+      $items = &$items[$segment];
+    }
+
+    return $items;
+  }
+
+  // ====
+
+  /**
+   * Return the given items as an array
+   *
+   * @param  array<TKey, TValue>|self<TKey, TValue>|object|string  $items
+   * @return array<TKey, TValue>
+   */
+  protected function getArrayItems($items)
+  {
+    if (is_array($items)) {
+      return $items;
+    }
+
+    if ($items instanceof self) {
+      return $items->all();
+    }
+
+    return (array) $items;
+  }
+
+  // ====
+
+  /**
+   * Check if a given key or keys exists
+   *
+   * @param  array<TKey>|int|string  $keys
+   * @return bool
+   */
+  public function has($keys)
+  {
+    $keys = (array) $keys;
+
+    if (!$this->items || $keys === []) {
+      return false;
+    }
+
+    foreach ($keys as $key) {
+      $items = $this->items;
+
+      if ($this->exists($items, $key)) {
+        continue;
+      }
+
+      foreach (explode($this->delimiter, $key) as $segment) {
+        if (!is_array($items) || !$this->exists($items, $segment)) {
+          return false;
+        }
+
+        $items = $items[$segment];
+      }
+    }
+
+    return true;
+  }
+
+  // ====
+
+  /**
+   * Check if a given key or keys are empty
+   *
+   * @param  array<TKey>|int|string|null  $keys
+   * @return bool
+   */
+  public function isEmpty($keys = null)
+  {
+    if ($keys === null) {
+      return empty($this->items);
+    }
+
+    $keys = (array) $keys;
+
+    foreach ($keys as $key) {
+      if (!empty($this->get($key))) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  // ====
+
+  /**
+   * Merge a given array or a Dot object with the given key
+   * or with the whole Dot object
+   *
+   * @param  array<TKey, TValue>|self<TKey, TValue>|string  $key
+   * @param  array<TKey, TValue>|self<TKey, TValue>  $value
+   * @return $this
+   */
+  public function merge($key, $value = [])
+  {
+    if (is_array($key)) {
+      $this->items = array_merge($this->items, $key);
+    } elseif (is_string($key)) {
+      $items = (array) $this->get($key);
+      $value = array_merge($items, $this->getArrayItems($value));
+
+      $this->set($key, $value);
+    } elseif ($key instanceof self) {
+      $this->items = array_merge($this->items, $key->all());
+    }
+
+    return $this;
+  }
+
+  // ====
+
+  /**
+   * Recursively merge a given array or a Dot object with the given key
+   * or with the whole Dot object.
+   *
+   * Duplicate keys are converted to arrays.
+   *
+   * @param  array<TKey, TValue>|self<TKey, TValue>|string  $key
+   * @param  array<TKey, TValue>|self<TKey, TValue>  $value
+   * @return $this
+   */
+  public function mergeRecursive($key, $value = [])
+  {
+    if (is_array($key)) {
+      $this->items = array_merge_recursive($this->items, $key);
+    } elseif (is_string($key)) {
+      $items = (array) $this->get($key);
+      $value = array_merge_recursive($items, $this->getArrayItems($value));
+
+      $this->set($key, $value);
+    } elseif ($key instanceof self) {
+      $this->items = array_merge_recursive($this->items, $key->all());
+    }
+
+    return $this;
+  }
+
+  // ====
+
+  /**
+   * Recursively merge a given array or a Dot object with the given key
+   * or with the whole Dot object.
+   *
+   * Instead of converting duplicate keys to arrays, the value from
+   * given array will replace the value in Dot object.
+   *
+   * @param  array<TKey, TValue>|self<TKey, TValue>|string  $key
+   * @param  array<TKey, TValue>|self<TKey, TValue>  $value
+   * @return $this
+   */
+  public function mergeRecursiveDistinct($key, $value = [])
+  {
+    if (is_array($key)) {
+      $this->items = $this->arrayMergeRecursiveDistinct($this->items, $key);
+    } elseif (is_string($key)) {
+      $items = (array) $this->get($key);
+      $value = $this->arrayMergeRecursiveDistinct($items, $this->getArrayItems($value));
+
+      $this->set($key, $value);
+    } elseif ($key instanceof self) {
+      $this->items = $this->arrayMergeRecursiveDistinct($this->items, $key->all());
+    }
+
+    return $this;
+  }
+
+  // ====
+
+  /**
+   * Merges two arrays recursively. In contrast to array_merge_recursive,
+   * duplicate keys are not converted to arrays but rather overwrite the
+   * value in the first array with the duplicate value in the second array.
+   *
+   * @param  array<TKey, TValue>|array<TKey, array<TKey, TValue>>  $array1 Initial array to merge
+   * @param  array<TKey, TValue>|array<TKey, array<TKey, TValue>>  $array2 Array to recursively merge
+   * @return array<TKey, TValue>|array<TKey, array<TKey, TValue>>
+   */
+  protected function arrayMergeRecursiveDistinct(array $array1, array $array2)
+  {
+    $merged = &$array1;
+
+    foreach ($array2 as $key => $value) {
+      if (is_array($value) && isset($merged[$key]) && is_array($merged[$key])) {
+        $merged[$key] = $this->arrayMergeRecursiveDistinct($merged[$key], $value);
+      } else {
+        $merged[$key] = $value;
+      }
+    }
+
+    return $merged;
+  }
+
+  // ====
+
+  /**
+   * Return the value of a given key and
+   * delete the key
+   *
+   * @param  int|string|null  $key
+   * @param  mixed  $default
+   * @return mixed
+   */
+  public function pull($key = null, $default = null)
+  {
+    if ($key === null) {
+      $value = $this->all();
+      $this->clear();
+
+      return $value;
+    }
+
+    $value = $this->get($key, $default);
+    $this->delete($key);
+
+    return $value;
+  }
+
+  // ====
+
+  /**
+   * Push a given value to the end of the array
+   * in a given key
+   *
+   * @param  mixed  $key
+   * @param  mixed  $value
+   * @return $this
+   */
+  public function push($key, $value = null)
+  {
+    if ($value === null) {
+      $this->items[] = $key;
+
+      return $this;
+    }
+
+    $items = $this->get($key);
+
+    if (is_array($items) || $items === null) {
+      $items[] = $value;
+      $this->set($key, $items);
+    }
+
+    return $this;
+  }
+
+  // ====
+
+  /**
+   * Replace all values or values within the given key
+   * with an array or Dot object
+   *
+   * @param  array<TKey, TValue>|self<TKey, TValue>|string  $key
+   * @param  array<TKey, TValue>|self<TKey, TValue>  $value
+   * @return $this
+   */
+  public function replace($key, $value = [])
+  {
+    if (is_array($key)) {
+      $this->items = array_replace($this->items, $key);
+    } elseif (is_string($key)) {
+      $items = (array) $this->get($key);
+      $value = array_replace($items, $this->getArrayItems($value));
+
+      $this->set($key, $value);
+    } elseif ($key instanceof self) {
+      $this->items = array_replace($this->items, $key->all());
+    }
+
+    return $this;
+  }
+
+  // ====
+
+  /**
+   * Set a given key / value pair or pairs
+   *
+   * @param  array<TKey, TValue>|int|string  $keys
+   * @param  mixed  $value
+   * @return $this
+   */
+  public function set($keys, $value = null)
+  {
+    if (is_array($keys)) {
+      foreach ($keys as $key => $value) {
+        $this->set($key, $value);
+      }
+
+      return $this;
+    }
+
+    $items = &$this->items;
+
+    if (is_string($keys)) {
+      foreach (explode($this->delimiter, $keys) as $key) {
+        if (!isset($items[$key]) || !is_array($items[$key])) {
+          $items[$key] = [];
+        }
+
+        $items = &$items[$key];
+      }
+    }
+
+    $items = $value;
+
+    return $this;
+  }
+
+  // ====
+
+  /**
+   * Replace all items with a given array
+   *
+   * @param  mixed  $items
+   * @return $this
+   */
+  public function setArray($items)
+  {
+    $this->items = $this->getArrayItems($items);
+
+    return $this;
+  }
+
+  // ====
+
+  /**
+   * Replace all items with a given array as a reference
+   *
+   * @param  array<TKey, TValue>  $items
+   * @return $this
+   */
+  public function setReference(array &$items)
+  {
+    $this->items = &$items;
+
+    return $this;
+  }
+
+  // ====
+
+  /**
+   * Return the value of a given key or all the values as JSON
+   *
+   * @param  mixed  $key
+   * @param  int  $options
+   * @return string|false
+   */
+  public function toJson($key = null, $options = 0)
+  {
+    if (is_string($key)) {
+      return json_encode($this->get($key), $options);
+    }
+
+    $options = $key === null ? 0 : $key;
+
+    return json_encode($this->items, $options);
+  }
+
+  // ====
+
+  /**
+   * Output or return a parsable string representation of the
+   * given array when exported by var_export()
+   *
+   * @param  array<TKey, TValue>  $items
+   * @return object
+   */
+  public static function __set_state(array $items): object
+  {
+    return (object) $items;
+  }
+
+  // ====
+
+  /*
+   * --------------------------------------------------------------
+   * ArrayAccess interface
+   * --------------------------------------------------------------
+   */
+
+  /**
+   * Check if a given key exists
+   *
+   * @param  int|string  $key
+   * @return bool
+   */
+  public function offsetExists($key): bool
+  {
+    return $this->has($key);
+  }
+
+  // ====
+
+  /**
+   * Return the value of a given key
+   *
+   * @param  int|string  $key
+   * @return mixed
+   */
+  #[\ReturnTypeWillChange]
+  public function offsetGet($key)
+  {
+    return $this->get($key);
+  }
+
+  // ====
+
+  /**
+   * Set a given value to the given key
+   *
+   * @param int|string|null  $key
+   * @param mixed  $value
+   */
+  public function offsetSet($key, $value): void
+  {
+    if ($key === null) {
+      $this->items[] = $value;
+
+      return;
+    }
+
+    $this->set($key, $value);
+  }
+
+  // ====
+
+  /**
+   * Delete the given key
+   *
+   * @param  int|string  $key
+   * @return void
+   */
+  public function offsetUnset($key): void
+  {
+    $this->delete($key);
+  }
+
+  // ====
+
+  /*
+   * --------------------------------------------------------------
+   * Countable interface
+   * --------------------------------------------------------------
+   */
+
+  /**
+   * Return the number of items in a given key
+   *
+   * @param  int|string|null  $key
+   * @return int
+   */
+  public function count($key = null): int
+  {
+    return count($this->get($key));
+  }
+
+  // ====
+
+  /*
+   * --------------------------------------------------------------
+   * IteratorAggregate interface
+   * --------------------------------------------------------------
+   */
+
+  /**
+   * Get an iterator for the stored items
+   *
+   * @return \ArrayIterator<TKey, TValue>
+   */
+  public function getIterator(): Traversable
+  {
+    return new ArrayIterator($this->items);
+  }
+
+  // ====
+
+  /*
+   * --------------------------------------------------------------
+   * JsonSerializable interface
+   * --------------------------------------------------------------
+   */
+
+  /**
+   * Return items for JSON serialization
+   *
+   * @return array<TKey, TValue>
+   */
+  public function jsonSerialize(): array
+  {
+    return $this->items;
+  }
+}
+
+// ====================================================================================================================
+} // ==================================================================================================================
+// ====================================================================================================================
+
+//=====================================================================================================================
 namespace Illuminate\Support { // == | ArrayUtils | ===================================================================
+// ====================================================================================================================
 
 /* The Arr class and its methods are under the following license:
 
@@ -2005,10 +2730,16 @@ class Arr {
 }
 
 // ====================================================================================================================
-} namespace { // ======================================================================================================
+} // ==================================================================================================================
+// ====================================================================================================================
+
+//=====================================================================================================================
+namespace { // ========================================================================================================
 // ====================================================================================================================
 
 // You have entered grid 9-2 of sub-junction 12.. Proceed.
 gAppUtils::Bootstrap();
 
+// ====================================================================================================================
 } // ==================================================================================================================
+// ====================================================================================================================

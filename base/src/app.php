@@ -16,7 +16,7 @@ gRegisterIncludes('LIBRARIES', array(
 
 if (gRegistryUtils::Component('aus')) {
   gRegSet('app.component', 'aus');
-  gConsoleUtils::extensibleMarkup(kXmlTag . kNewLine . kLessThan . 'updates' . kSlash . kGreaterThan, true);
+  gConsoleUtils::extensibleMarkup(gAppUtils::TAG_XML . kNewLine . kLessThan . 'updates' . kSlash . kGreaterThan, true);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

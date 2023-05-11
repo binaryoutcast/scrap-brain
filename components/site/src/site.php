@@ -52,7 +52,7 @@ switch (gRegistry('app.path.0')) {
     (gRegistry('app.path.1') == 'interlink') ? gRedirect($ilFilesURL) : gRedirect($codeAtGithubURL);  
     break;
   case 'root':
-    gOutput(gReadFile(gBuildPath(ROOT_PATH, 'components', 'site', 'content', 'splash.content')), 'html');
+    gOutput(gReadFile(gBuildPath(kRootPath, 'components', 'site', 'content', 'splash.content')), 'html');
     break;
   case 'updates':
     gContent('BinOC Updates');
