@@ -112,7 +112,7 @@ const kPosOne               = 1;
 
 // --------------------------------------------------------------------------------------------------------------------
 
-const kJsonPrettyEncode     = gAppUtils::kJsonFlags['display'];
+const kJsonPrettyEncode     = gAppUtils::JSON_ENCODE_FLAGS['display'];
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -187,8 +187,8 @@ if (kUtilsGlobalWrappers) {
 // == | Static App Class | ============================================================================================
 
 class gAppUtils {
-  const kFileWriteFlags      = "w+";
-  const kFileExt             = array(
+  const FILE_WRITE_FLAGS      = "w+";
+  const FILE_EXT             = array(
     'php'                     => kDot . 'php',
     'ini'                     => kDot . 'ini',
     'html'                    => kDot . 'html',
@@ -220,18 +220,18 @@ class gAppUtils {
 
   // ----------------------------------------------------------------------------------------------------------------
 
-  const kXmlTag               = '<?xml version="1.0" encoding="utf-8" ?>';
+  const TAG_XML               = '<?xml version="1.0" encoding="utf-8" ?>';
 
   // ----------------------------------------------------------------------------------------------------------------
 
-  const kJsonFlags            = array(
+  const JSON_ENCODE_FLAGS            = array(
     'display'                 => JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE,
     'storage'                 => JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE,
   );
 
   // ----------------------------------------------------------------------------------------------------------------
 
-  const kRegexPatterns        = array(
+  const REGEX_PATTERNS        = array(
     'query'                   => "/[^-a-zA-Z0-9_\-\/\{\}\@\.\%\s\,]/",
     'yaml'                    => "/\A---(.|\n)*?---/",
     'guid'                    => "/^\{[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\}$/i",
@@ -359,10 +359,10 @@ class gAppUtils {
     foreach($aIncludes as $_key => $_value) { 
       switch ($aConst) {
         case 'COMPONENTS':
-          $includes[$_value] = gArrayStrUtils::BuildPath(ROOT_PATH, 'components', $_value, 'src', $_value . gAppUtils::kFileExt['php']);
+          $includes[$_value] = gArrayStrUtils::BuildPath(ROOT_PATH, 'components', $_value, 'src', $_value . gAppUtils::FILE_EXT['php']);
           break;
         case 'MODULES':
-          $includes[$_value] = gArrayStrUtils::BuildPath(ROOT_PATH, 'modules', $_value . gAppUtils::kFileExt['php']);
+          $includes[$_value] = gArrayStrUtils::BuildPath(ROOT_PATH, 'modules', $_value . gAppUtils::FILE_EXT['php']);
           break;
         case 'LIBRARIES':
           if (str_contains($_value, kDot . kDot)) {
@@ -843,7 +843,7 @@ class gRegistryUtils {
     // We always pass $_GET values through a general regular expression
     // This allows only a-z A-Z 0-9 - / { } @ % whitespace and ,
     if ($rv && $aNode == "_GET") {
-      $rv = preg_replace(gAppUtils::kRegexPatterns['query'], kEmptyString, $rv);
+      $rv = preg_replace(gAppUtils::REGEX_PATTERNS['query'], kEmptyString, $rv);
     }
 
     // Files need special handling.. In principle we hard fail if it is anything other than
@@ -1130,7 +1130,7 @@ class gConsoleUtils {
     if (gRegistryUtils::Debug() && gRegistryUtils::SuperGlobal('get', 'runtime')) {
       $content = array_merge(gRegistryUtils::GetStore(), ['superglobal' => $GLOBALS]);
       $content['console']['output']['responseBody'] = $aContent;
-      $content = json_encode($content, gAppUtils::kJsonFlags['display']);
+      $content = json_encode($content, gAppUtils::JSON_ENCODE_FLAGS['display']);
       self::Header('text', true);
       print($content);
       exit();
@@ -1149,7 +1149,7 @@ class gConsoleUtils {
       $content = $aContent ?? kEmptyString;
     }
 
-    $content = (is_string($content) || is_int($content)) ? $content : json_encode($content, gAppUtils::kJsonFlags['display']);
+    $content = (is_string($content) || is_int($content)) ? $content : json_encode($content, gAppUtils::JSON_ENCODE_FLAGS['display']);
 
     // Send the header if not cli
     if (SAPI_IS_CLI) {
@@ -1215,7 +1215,7 @@ class gConsoleUtils {
     }
 
     if ($metadata('textbox')) {
-      $content = (is_string($content) || is_int($content)) ? $content : json_encode($content, gAppUtils::kJsonFlags['display']);
+      $content = (is_string($content) || is_int($content)) ? $content : json_encode($content, gAppUtils::JSON_ENCODE_FLAGS['display']);
       $content = '<form><textarea class="special-textbox" name="content" rows="30" readonly>' . $content . '</textarea></form>';
     }
 
@@ -1308,11 +1308,11 @@ class gConsoleUtils {
         }
         $spCase = gRegistryUtils::GetRegistryValue('superglobal.get.case');
         $spTestsPath = gArrayStrUtils::BuildPath(ROOT_PATH, 'base', 'tests');
-        $spGlobTests = glob(gArrayStrUtils::BuildPath($spTestsPath, kAsterisk . gAppUtils::kFileExt['php']));
+        $spGlobTests = glob(gArrayStrUtils::BuildPath($spTestsPath, kAsterisk . gAppUtils::FILE_EXT['php']));
         $spTests = kEmptyArray;
 
         foreach ($spGlobTests as $_value) {
-          $spTests[] = gArrayStrUtils::Subst($_value, [gAppUtils::kFileExt['php'] => kEmptyString, $spTestsPath . kSlash => kEmptyString]);
+          $spTests[] = gArrayStrUtils::Subst($_value, [gAppUtils::FILE_EXT['php'] => kEmptyString, $spTestsPath . kSlash => kEmptyString]);
         }
 
         if ($spCase) {
@@ -1321,7 +1321,7 @@ class gConsoleUtils {
           }
 
           gRegistryUtils::SetRegistryValue('special.testCase', $spCase);
-          require_once(gArrayStrUtils::BuildPath($spTestsPath, $spCase . gAppUtils::kFileExt['php']));
+          require_once(gArrayStrUtils::BuildPath($spTestsPath, $spCase . gAppUtils::FILE_EXT['php']));
           headers_sent() ? exit() : gAppUtils::Error('The operation completed successfully.');
         }
 
