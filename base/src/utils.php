@@ -33,7 +33,7 @@ define('kUtilities', '2.0.0a1');
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// These constants must be defined because they might be used before gRegistryUtils is init'd
+// These constants must be defined because they might be used before gShitRegConfig is init'd
 if (!defined('kAppVendor'))             { define('kAppVendor', 'Binary Outcast'); }
 if (!defined('kAppName'))               { define('kAppName', 'Metropolis-based Software'); }
 if (!defined('kAppVersion'))            { define('kAppVersion', kUtilities); }
@@ -112,7 +112,7 @@ const kPosOne               = 1;
 
 // --------------------------------------------------------------------------------------------------------------------
 
-const kJsonPrettyEncode     = gApplication::JSON_ENCODE_FLAGS['display'];
+const kJsonPrettyEncode     = gAppUtils::JSON_ENCODE_FLAGS['display'];
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -126,56 +126,553 @@ const PALEMOON_GUID         = '{8de7fcbb-c55c-4fbe-bfc5-fc555c87dbc4}';
 
 // ====================================================================================================================
 
-// These are global wrapping functions. Most are optional except for the most basic functions
 
-// Application
-  function gError                       (...$args) { return gApplication::Error(...$args); }
-  function gNotFound                    (...$args) { return gApplication::gNotFound(...$args); }
-  function gReadFile                    (...$args) { return gApplication::ReadFile(...$args); }
-
-// Console
-  function gOutput                      (...$args) { return gConsoleUtils::Output(...$args); }
-
-// Mozilla Toolkit Vc
-  function gVersionCompare              (...$args) { return mozilla\vc\ToolkitVersionComparator::compare(...$args); }
-
-// --------------------------------------------------------------------------------------------------------------------
-
-if (kUtilsGlobalWrappers) {
-  // Application
-  function gEnsureValue                 (...$args) { return gApplication::EnsureValue(...$args); }
-  function gRegisterIncludes            (...$args) { return gApplication::RegisterIncludes(...$args); }
-  function gLoadComponent               (...$args) { return gApplication::LoadComponent(...$args); }
-
-  // Application Utilities
-  function gSubst                       (...$args) { return gAppUtils::Subst(...$args); }
-  function gSubstEx                     (...$args) { return gAppUtils::SubstEx(...$args); }
-  function gContains                    (...$args) { return gAppUtils::Contains(...$args); }
-  function gExplodeStr                  (...$args) { return gAppUtils::ExplodeStr(...$args); }
-  function gBuildPath                   (...$args) { return gAppUtils::BuildPath(...$args); }
-  function gStripStr                    (...$args) { return gAppUtils::StripStr(...$args); }
-  function gHexString                   (...$args) { return gAppUtils::HexString(...$args); }
-  function gPasswordHash                (...$args) { return gAppUtils::PasswordHash(...$args); }
-  function gPasswordVerify              (...$args) { return gAppUtils::PasswordVerify(...$args); }
-  function gGlobalIdentifer             (...$args) { return gAppUtils::GlobalIdentifer(...$args); }
-
-  // Registry
-  function gRegistry                    (...$args) { return gRegistryUtils::GetKey(...$args); }
-  function gRegSet                      (...$args) { return gRegistryUtils::SetKey(...$args); }
-
-  // Console
-  function gHeader                      (...$args) { return gConsoleUtils::Header(...$args); }
-  function gContentType                 (...$args) { return gConsoleUtils::ContentType(...$args); }
-  function gSendHeaders                 (...$args) { return gConsoleUtils::SendHeaders(...$args); }
-  function gRedirect                    (...$args) { return gConsoleUtils::Redirect(...$args); }
-  function gContent                     (...$args) { return gConsoleUtils::Content(...$args); }
-}
 
 // ====================================================================================================================
 
 // == | Static Application Class | ====================================================================================
 
-class gApplication {
+class gMetropolis {
+  private static $sInitialized = false;
+  private static $sRuntimeConfiguration = kEmptyArray;
+  
+  /********************************************************************************************************************
+  * Application Init
+  *********************************************************************************************************************/
+  public static function init() {
+    if (gMetropolis::$sInitialized) {
+      return gMetropolis::$sInitialized;
+    }
+
+    // ------------------------------------------------------------------------------------------------------------------
+
+    $path = gAppUtils::ExplodePath(gMetropolis::SuperGlobal('get', 'path', kSlash));
+
+    $config = array(
+      'app' => array(
+        'component'   => gMetropolis::SuperGlobal('get', 'component', 'site'),
+        'path'        => $path,
+        'depth'       => count($path ?? kEmptyArray),
+        'debug'       => kDebugMode,
+        'offline'     => file_exists(gAppUtils::BuildPath(kRootPath, '.offline')),
+      ),
+      'network' => array(
+        'scheme'      => gMetropolis::SuperGlobal('server', 'SCHEME') ?? (gMetropolis::SuperGlobal('server', 'HTTPS') ? 'https' : 'http'),
+        'baseDomain'  => gConUtils::GetDomain(gMetropolis::SuperGlobal('server', 'SERVER_NAME', 'localhost')),
+        'subDomain'   => gConUtils::GetDomain(gMetropolis::SuperGlobal('server', 'SERVER_NAME', 'localhost'), true),
+        'remoteAddr'  => gMetropolis::SuperGlobal('server', 'HTTP_X_FORWARDED_FOR', gMetropolis::SuperGlobal('server', 'REMOTE_ADDR', '127.0.0.1')),
+        'userAgent'   => gMetropolis::SuperGlobal('server', 'HTTP_USER_AGENT', 'php' . kDash . PHP_SAPI . kSlash . PHP_VERSION),
+      ),
+      'console' => array(
+        'output' => array(
+          'contentType' => 'text/plain',
+          'responseCode'  => 200,
+          'httpHeaders' => kEmptyArray,
+        ),
+        'content' => array(
+          'skin'          => kDefaultSkinName,
+          'skinPath'      => kDefaultSkinPath,
+          'template'      => null,
+          'stylesheet'    => null,
+          'mainmenu'      => kDefaultMenu,
+          'commandbar'    => kDefaultMenu,
+          'statustext'    => 'Done',
+        ),
+      ),
+    );
+
+    if (defined('kDebugDomain') && !SAPI_IS_CLI) {
+      $config['app']['debug'] = (gMetropolis::SuperGlobal('server', 'SERVER_NAME', 'localhost') != constant('kDebugDomain') ?? kEmptyString) ?
+                                file_exists(gAppUtils::BuildPath(kRootPath, '.debugMode')) :
+                                !kDebugMode;
+    }
+
+    // ------------------------------------------------------------------------------------------------------------------
+
+    gMetropolis::$sRuntimeConfiguration = new \Adbar\Dot($config);
+
+    // ------------------------------------------------------------------------------------------------------------------
+    
+    // Init any other static classes
+    gShitRegConfig::init();
+    gErrorUtils::init();
+
+    // ------------------------------------------------------------------------------------------------------------------
+
+    // These are global wrapping functions. Most are optional except for the most basic functions
+
+    // Application
+      function gError                       (...$args) { return gMetropolis::Error(...$args); }
+      function gNotFound                    (...$args) { return gMetropolis::gNotFound(...$args); }
+      function gReadFile                    (...$args) { return gMetropolis::ReadFile(...$args); }
+
+    // Console
+      function gOutput                      (...$args) { return gConUtils::Output(...$args); }
+
+    // Mozilla Toolkit Vc
+      function gVersionCompare              (...$args) { return mozilla\vc\ToolkitVersionComparator::compare(...$args); }
+
+    // ------------------------------------------------------------------------------------------------------------------
+
+    if (kUtilsGlobalWrappers) {
+      // Application
+      function gEnsureValue                 (...$args) { return gMetropolis::EnsureValue(...$args); }
+      function gRegisterIncludes            (...$args) { return gMetropolis::RegisterIncludes(...$args); }
+      function gLoadComponent               (...$args) { return gMetropolis::LoadComponent(...$args); }
+
+      // Application Utilities
+      function gSubst                       (...$args) { return gAppUtils::Subst(...$args); }
+      function gSubstEx                     (...$args) { return gAppUtils::SubstEx(...$args); }
+      function gContains                    (...$args) { return gAppUtils::Contains(...$args); }
+      function gExplodeStr                  (...$args) { return gAppUtils::ExplodeStr(...$args); }
+      function gBuildPath                   (...$args) { return gAppUtils::BuildPath(...$args); }
+      function gStripStr                    (...$args) { return gAppUtils::StripStr(...$args); }
+      function gHexString                   (...$args) { return gAppUtils::HexString(...$args); }
+      function gPasswordHash                (...$args) { return gAppUtils::PasswordHash(...$args); }
+      function gPasswordVerify              (...$args) { return gAppUtils::PasswordVerify(...$args); }
+      function gGlobalIdentifer             (...$args) { return gAppUtils::GlobalIdentifer(...$args); }
+
+      // Registry
+      function gRegistry                    (...$args) { return gShitRegConfig::GetKey(...$args); }
+      function gRegSet                      (...$args) { return gShitRegConfig::SetKey(...$args); }
+
+      // Console
+      function gHeader                      (...$args) { return gConUtils::Header(...$args); }
+      function gContentType                 (...$args) { return gConUtils::ContentType(...$args); }
+      function gSendHeaders                 (...$args) { return gConUtils::SendHeaders(...$args); }
+      function gRedirect                    (...$args) { return gConUtils::Redirect(...$args); }
+      function gContent                     (...$args) { return gConUtils::Content(...$args); }
+    }
+
+    // ------------------------------------------------------------------------------------------------------------------
+
+
+    gMetropolis::$sInitialized = true;
+
+    // This will bootstrap the Metropolis-based application loading. You may set kBoostrap to false in the entry point to
+    // completely bypass this execution and return to the entry point.
+    //
+    // Bootstrap has THREE modes of operation:
+    // App is Special "Component"     - Simply forces the application to always load the Special "Component".
+    // App is ./base/src/app.php      - In this mode we will load the application from this file and if execution isn't
+    //                                  otherwise terminated it will terminate here with a 404/PC LOAD LETTER.
+    // App is Entry point             - Return to the entry point but allow for the possibility of switching to one of
+    //                                  the other modes without adding or removing kBootstrap
+    //
+    // NOTE: Future behavior will have kBootstrap set to false by default.. like in a few weeks if not sooner.
+    if (kBootstrap) {
+      // The application effectively IS the special component
+      if (gShitRegConfig::GetKey('constant.appIsSpecialComponent')) {
+        gMetropolis::LoadComponent(kSpecialComponent);
+      }
+
+      // App is ./base/src/app.php
+      if (file_exists(gAppUtils::BuildPath(kRootPath, 'base', 'src', 'app.php'))) {
+        require_once(gAppUtils::BuildPath(kRootPath, 'base', 'src', 'app.php'));
+
+        if (gShitRegConfig::GetKey('app.path.0') == kSpecialComponent) {
+          gShitRegConfig::SetKey('app.component', kSpecialComponent);
+        }
+
+        gMetropolis::LoadComponent(gShitRegConfig::GetKey('app.component'));
+        gMetropolis::NotFound('PC LOAD LETTER');
+      }
+    }
+  }
+
+  /********************************************************************************************************************
+  * Set app config key
+  *********************************************************************************************************************/
+  public static function SetConfig(string $aDottedKey, mixed $aNewValue) {
+    $vNodes = ['constant', 'superglobal'];
+    $keyNodes = gAppUtils::ExplodeStr(kDot, $aDottedKey) ?? kEmptyArray;
+    $firstNode = $keyNodes[array_key_first($keyNodes)] ?? kEmptyString;
+    $lastNode = $keyNodes[array_key_last($keyNodes)] ?? kEmptyString;
+
+    if (gAppUtils::Contains($vNodes, $firstNode, gAppUtils::IN_ARRAY)) {
+      gMetropolis::Error('Setting values on virtual nodes is not supported.');
+    }
+
+    if (gAppUtils::Contains($lastNode, '[]', gAppUtils::ENDS_WITH)) {
+      $aDottedKey = substr($aDottedKey, 0, -2);
+      
+      $oldValue = gShitRegConfig::$sStore2->get($aDottedKey, kEmptyArray);
+
+      if ($oldValue && !is_array($oldValue)) {
+        $oldValue = [$oldValue];
+      }
+
+      $oldValue[] = $aNewValue;
+      $aNewValue = $oldValue;
+    }
+    else if (is_numeric($lastNode)) {
+      array_pop($keyNodes);
+      $truncatedDottedKey = implode(kDot, $keyNodes);
+      $oldValue = gShitRegConfig::$sStore2->get(implode(kDot, $keyNodes));
+
+      if (!$oldValue || !array_is_list($oldValue)) {
+        gMetropolis::Error('Using indexed keys can only be done if the value is already an indexed list.');
+      }
+
+      $oldValue[(int)$lastNode] = $aNewValue;
+      $aNewValue = $oldValue;
+      $aDottedKey = $truncatedDottedKey;
+    }
+
+    return gShitRegConfig::$sStore2->set($aDottedKey, $aNewValue);
+  }
+
+  /********************************************************************************************************************
+  * Loads a component.
+  *********************************************************************************************************************/
+  public static function LoadComponent(string $aComponent) {
+    if ($aComponent == kSpecialComponent) {
+      gMetropolis::SpecialComponent();
+    }
+
+    $componentPath = gShitRegConfig::GetKey('constant.components' . kDot . $aComponent);
+
+    if (!$componentPath) {
+      gMetropolis::NotFound('Unknown component.');
+    }
+
+    if (!file_exists($componentPath)) {
+      gMetropolis::NotFound('Failed to load the' . kSpace . $aComponent . kSpace .'component.');
+    }
+
+    gShitRegConfig::SetKey('app.componentPath', gAppUtils::BuildPath(kRootPath, 'components', $aComponent));
+    require_once($componentPath);
+  }
+
+  /********************************************************************************************************************
+  * Read a file
+  *********************************************************************************************************************/
+  public static function ReadFile(string $aFile) {
+    $rv = @file_get_contents($aFile);
+    return gMetropolis::EnsureValue($rv);
+  }
+
+  /********************************************************************************************************************
+  * General Error Function
+  *
+  * @param $aMessage   Error message
+  ********************************************************************************************************************/
+  public static function Error(?string $aMessage = null) {
+    if (!$aMessage) {
+      $aMessage = 'No further details were provided.';
+    }
+
+    gErrorUtils::report(['code' => E_ALL, 'message' => $aMessage,
+                         'file' => null, 'line' => null,
+                         'trace' => debug_backtrace(2)]);
+  }
+
+  /********************************************************************************************************************
+  * Sends 404 or prints error message if debug mode
+  ********************************************************************************************************************/
+  public static function NotFound(?string $aMessage = null) {
+    if (!$aMessage) {
+      $aMessage = 'HTTP/1.1 404 Not Found';
+    }
+
+    if (gShitRegConfig::Debug()) {
+      gErrorUtils::report(['code' => E_ALL, 'message' => $aMessage,
+                           'file' => null, 'line' => null,
+                           'trace' => debug_backtrace(2)]);
+    }
+    gConUtils::Header(404);
+  }
+
+  /********************************************************************************************************************
+  * Check if a value should be null
+  ********************************************************************************************************************/
+  public static function EnsureValue($aValue, $aFallback = null) {
+    return (empty($aValue) || $aValue === 'none') ? $aFallback : $aValue;
+  }
+
+  /**********************************************************************************************************************
+  * Special Component!
+  ***********************************************************************************************************************/
+  public static function SpecialComponent() {
+    $spCurrentPath = gShitRegConfig::GetKey('app.path');
+    $spPathCount = gShitRegConfig::GetKey('app.depth');
+
+    if ($spCurrentPath[0] != kSpecialComponent) {
+      gConUtils::Redirect(kSlash . kSpecialComponent . kSlash);
+    }
+
+    gShitRegConfig::SetKey('app.component', kSpecialComponent);
+
+    if (gShitRegConfig::GetKey('constant.disableSpecialComponent')) {
+      gMetropolis::NotFound('The special component has been disabled.');
+    }
+
+    gShitRegConfig::SetKey('console.content.sectionName', kSpecialComponentName);
+
+    // The Special Component never has more than one level below it
+    // We still have to determine the root of the component though...
+    if ($spPathCount == 1) {
+      // URL /special/
+      $spSpecialFunction = 'root';
+    }
+    else {
+      // URL /special/xxx/
+      if ($spPathCount > 2) {
+        gMetropolis::NotFound('The special component only has one path level.');
+      }
+      $spSpecialFunction = $spCurrentPath[1];
+    }
+
+    $spCommandBar = array(
+      '/special/'                 => kSpecialComponentName,
+      '/special/test/'            => 'Test Cases',
+      '/special/vc/'              => 'Version Compare',
+      '/special/guid/'            => 'GUID',
+      '/special/hex/'             => 'Hex String',
+    );
+
+    gShitRegConfig::SetKey('console.content.commandbar', gShitRegConfig::GetKey('constant.components.site') ?
+                                               array_merge(kDefaultMenu, $spCommandBar) :
+                                               $spCommandBar);
+
+    unset($spCurrentPath, $spPathCount, $spCommandBar);
+
+    switch ($spSpecialFunction) {
+      case 'root':
+        $spContent = '<h2>Welcome</h2>' .
+                     '<p>Please select a special function from the command bar above.';
+        gConUtils::Content($spContent, ['title' => 'Overview']);
+        break;
+      case 'test':
+        if (!gShitRegConfig::Debug()) {
+          gMetropolis::NotFound('This special function is not available when not in debug mode.');
+        }
+        $spCase = gShitRegConfig::GetKey('superglobal.get.case');
+        $spTestsPath = gAppUtils::BuildPath(kRootPath, 'base', 'tests');
+        $spGlobTests = glob(gAppUtils::BuildPath($spTestsPath, kAsterisk . gAppUtils::FILE_EXT['php']));
+        $spTests = kEmptyArray;
+
+        foreach ($spGlobTests as $_value) {
+          $spTests[] = gAppUtils::Subst($_value, [gAppUtils::FILE_EXT['php'] => kEmptyString, $spTestsPath . kSlash => kEmptyString]);
+        }
+
+        if ($spCase) {
+          if (!gAppUtils::Contains($spCase, $spTests)) {
+            gMetropolis::Error('Unknown test case.');
+          }
+
+          gShitRegConfig::SetKey('special.testCase', $spCase);
+          require_once(gAppUtils::BuildPath($spTestsPath, $spCase . gAppUtils::FILE_EXT['php']));
+          headers_sent() ? exit() : gMetropolis::Error('The operation completed successfully.');
+        }
+
+        $spContent = kEmptyString;
+
+        foreach ($spTests as $_value) {
+          $spContent .= '<li><a href="/special/test/?case=' . $_value . '">' . $_value . '</a></li>';
+        }
+
+        $spContent = ($spContent == kEmptyString) ?
+                     '<p>There are no test cases.</p>' :
+                     '<h2>Please select a test case&hellip;</h2><ul>' . $spContent . '</ul>' . str_repeat('<br />', 3);
+
+        gConUtils::Content($spContent, ['title' => 'Test Cases']);
+        break;
+      case 'vc':
+        $spCurrVer = gShitRegConfig::GetKey('superglobal.post.currVer');
+        $spCompVer = gShitRegConfig::GetKey('superglobal.post.compVer');
+
+        if ($spCurrVer && $spCompVer) {
+          gConUtils::Content(gVersionCompare($spCurrVer, $spCompVer));
+        }
+
+        $spForm = '<form action="/special/vc/" method="post">Current Version:<br/><input type="text" name="currVer"><br/><br/>' .
+                  'Compare to Version:<br/><input type="text" name="compVer"><br/><br/><input type="submit"></form>';
+
+        gConUtils::Content('<h2>nsIVersionComparator</h2>' . $spForm, ['title' => 'Runtime Status']);
+        break;
+      case 'guid':
+        gConUtils::Content(gAppUtils::GlobalIdentifer(gShitRegConfig::GetKey('superglobal.get.vendor'), true),
+                 ['title' => 'Globally Unique Identifier (In XPIDL Notation)', 'textbox' => true]);
+        break;
+      case 'hex':
+        gConUtils::Content(gAppUtils::HexString(gShitRegConfig::GetKey('superglobal.get.length', 40)),
+                 ['title' => 'Pseudo-Random Hex String', 'textbox' => true]);
+        break;
+      case 'system':
+        if (!gShitRegConfig::Debug()) {
+          gMetropolis::NotFound('This special function is not available when not in debug mode.');
+        }
+        gMetropolis::Header('html', true);
+        phpinfo(INFO_GENERAL | INFO_CONFIGURATION | INFO_ENVIRONMENT | INFO_VARIABLES);
+        break;
+      default:
+        gMetropolis::NotFound('There is no matching function in the special component.');
+    }
+
+    // We're done here
+    exit();
+  }
+  
+  /********************************************************************************************************************
+  * Access Super Globals
+  ********************************************************************************************************************/
+  public static function SuperGlobal($aNode, $aKey, $aDefault = null) {
+    $rv = null;
+
+    // Turn the variable type into all caps prefixed with an underscore
+    $aNode = kUnderbar . strtoupper($aNode);
+
+    // This handles the superglobals
+    switch($aNode) {
+      case '_CHECK':
+        $rv = gMetropolis::EnsureValue($aKey);
+        break;
+      case '_GET':
+        if (SAPI_IS_CLI && $GLOBALS['argc'] > 1) {
+          $args = kEmptyArray;
+
+          foreach (array_slice($GLOBALS['argv'], 1) as $_value) {
+            $arg = @explode('=', $_value);
+
+            if (count($arg) < 2) {
+              continue;
+            }
+
+            $attr = str_replace('--', kEmptyString, $arg[0]);
+            $val = gMetropolis::EnsureValue(str_replace('"', kEmptyString, $arg[1]));
+
+            if (!$attr && !$val) {
+              continue;
+            }
+
+            $args[$attr] = $val;
+          }
+
+          $rv = $args[$aKey] ?? $aDefault;
+          break;
+        }
+      case '_SERVER':
+      case '_ENV':
+      case '_FILES':
+      case '_POST':
+      case '_COOKIE':
+      case '_SESSION':
+        $rv = $GLOBALS[$aNode][$aKey] ?? $aDefault;
+        break;
+      default:
+        // We don't know WHAT was requested but it is obviously wrong...
+        gMetropolis::Error('Unknown system node.');
+    }
+    
+    // We always pass $_GET values through a general regular expression
+    // This allows only a-z A-Z 0-9 - / { } @ % whitespace and ,
+    if ($rv && $aNode == "_GET") {
+      $rv = preg_replace(gAppUtils::REGEX_PATTERNS['query'], kEmptyString, $rv);
+    }
+
+    // Files need special handling.. In principle we hard fail if it is anything other than
+    // OK or NO FILE
+    if ($rv && $aNode == "_FILES") {
+      if (!in_array($rv['error'], [UPLOAD_ERR_OK, UPLOAD_ERR_NO_FILE])) {
+        gMetropolis::Error('Upload of ' . $aKey . ' failed with error code: ' . $rv['error']);
+      }
+
+      // No file is handled as merely being null
+      if ($rv['error'] == UPLOAD_ERR_NO_FILE) {
+        return null;
+      }
+
+      // Cursory check the actual mime-type and replace whatever the web client sent
+      $rv['type'] = mime_content_type($rv['tmp_name']);
+    }
+    
+    return $rv;
+  }
+
+  /********************************************************************************************************************
+  * Registers Files to be included such as components and modules
+  *********************************************************************************************************************/
+  public static function RegisterIncludes($aConst, $aIncludes) {
+    $aConst = strtoupper($aConst);
+
+    if (defined($aConst)) {
+      gMetropolis::Error($aConst . kSpace . 'files are already registered and may not be updated.');
+    }
+
+    $includes = kEmptyArray;
+
+    foreach($aIncludes as $_key => $_value) { 
+      switch ($aConst) {
+        case 'COMPONENTS':
+          $includes[$_value] = gAppUtils::BuildPath(kRootPath, 'components', $_value, 'src', $_value . gAppUtils::FILE_EXT['php']);
+          break;
+        case 'MODULES':
+          $includes[$_value] = gAppUtils::BuildPath(kRootPath, 'modules', $_value . gAppUtils::FILE_EXT['php']);
+          break;
+        case 'LIBRARIES':
+          if (str_contains($_value, kDot . kDot)) {
+            return;
+          }
+
+          $includes[$_key] = gAppUtils::BuildPath(kRootPath, 'third_party', $_value);
+          break;
+        default:
+          gfError('Unknown include type');
+      }
+    }
+
+    define($aConst, $includes);
+  }
+
+  /********************************************************************************************************************
+  * Get the registry property and return it
+  ********************************************************************************************************************/
+  public static function Component(?string $aCompareComponent = null) {
+    $rv = (gMetropolis::$sInited) ? gMetropolis::GetKey('app.component') : gMetropolis::SuperGlobal('get', 'component', 'site');
+
+    if ($aCompareComponent) {
+      $rv = ($rv === $aCompareComponent);
+    }
+
+    return $rv;
+  }
+
+  /********************************************************************************************************************
+  * Get the registry property and return it
+  ********************************************************************************************************************/
+  public static function Debug() {
+    return (gMetropolis::$sInited) ? gMetropolis::GetKey('app.debug') : kDebugMode;
+  }
+
+  /********************************************************************************************************************
+  * Get the registry property and return it
+  ********************************************************************************************************************/
+  public static function GetStore() {
+    return gMetropolis::$sStore;
+  }
+}
+
+// ====================================================================================================================
+
+// == | Application Utilities | =======================================================================================
+
+class gAppUtils {
+  const CONTAINS = kZero;
+  const STARTS_WITH = kPosOne;
+  const ENDS_WITH = kNegOne;
+  const IN_ARRAY = kZero;
+  const KEY_EXISTS = kPosOne;
+
+  // --------------------------------------------------------------------------------------------------------------------
+
+  const PASSWORD_CLEARTEXT    = "clrtxt";
+  const PASSWORD_HTACCESS     = "apr1";
+  const BASE64_ALPHABET       = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  const APRMD5_ALPHABET       = './0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+
+  // --------------------------------------------------------------------------------------------------------------------
+
   const FILE_WRITE_FLAGS      = "w+";
   const FILE_EXT             = array(
     'php'                     => kDot . 'php',
@@ -231,497 +728,6 @@ class gApplication {
 
   const VIRTUAL_NODES         = ['constant', 'superglobal'];
 
-  // ------------------------------------------------------------------------------------------------------------------
-
-  private static $sInitialized = false;
-  private static $sRuntimeConfiguration = kEmptyArray;
-  
-  /********************************************************************************************************************
-  * Application Init
-  *********************************************************************************************************************/
-  public static function init() {
-    if (gApplication::$sInitialized) {
-      return gApplication::$sInitialized;
-    }
-
-    // ------------------------------------------------------------------------------------------------------------------
-
-    $path = gAppUtils::ExplodePath(gApplication::SuperGlobal('get', 'path', kSlash));
-
-    $config = array(
-      'app' => array(
-        'component'   => gApplication::SuperGlobal('get', 'component', 'site'),
-        'path'        => $path,
-        'depth'       => count($path ?? kEmptyArray),
-        'debug'       => kDebugMode,
-        'offline'     => file_exists(gAppUtils::BuildPath(kRootPath, '.offline')),
-      ),
-      'network' => array(
-        'scheme'      => gApplication::SuperGlobal('server', 'SCHEME') ?? (gApplication::SuperGlobal('server', 'HTTPS') ? 'https' : 'http'),
-        'baseDomain'  => gConsoleUtils::GetDomain(gApplication::SuperGlobal('server', 'SERVER_NAME', 'localhost')),
-        'subDomain'   => gConsoleUtils::GetDomain(gApplication::SuperGlobal('server', 'SERVER_NAME', 'localhost'), true),
-        'remoteAddr'  => gApplication::SuperGlobal('server', 'HTTP_X_FORWARDED_FOR', gApplication::SuperGlobal('server', 'REMOTE_ADDR', '127.0.0.1')),
-        'userAgent'   => gApplication::SuperGlobal('server', 'HTTP_USER_AGENT', 'php' . kDash . PHP_SAPI . kSlash . PHP_VERSION),
-      ),
-      'console' => array(
-        'output' => array(
-          'contentType' => 'text/plain',
-          'responseCode'  => 200,
-          'httpHeaders' => kEmptyArray,
-        ),
-        'content' => array(
-          'skin'          => kDefaultSkinName,
-          'skinPath'      => kDefaultSkinPath,
-          'template'      => null,
-          'stylesheet'    => null,
-          'mainmenu'      => kDefaultMenu,
-          'commandbar'    => kDefaultMenu,
-          'statustext'    => 'Done',
-        ),
-      ),
-    );
-
-    if (defined('kDebugDomain') && !SAPI_IS_CLI) {
-      $config['app']['debug'] = (gApplication::SuperGlobal('server', 'SERVER_NAME', 'localhost') != constant('kDebugDomain') ?? kEmptyString) ?
-                                file_exists(gAppUtils::BuildPath(kRootPath, '.debugMode')) :
-                                !kDebugMode;
-    }
-
-    gApplication::$sRuntimeConfiguration = new \Adbar\Dot($config);
-    gApplication::$sInitialized = true;
-
-    // ------------------------------------------------------------------------------------------------------------------
-    
-    // Init any other static classes
-    gRegistryUtils::init();
-    gErrorUtils::init();
-
-    // ------------------------------------------------------------------------------------------------------------------
-
-    // This will bootstrap the Metropolis-based application loading. You may set kBoostrap to false in the entry point to
-    // completely bypass this execution and return to the entry point.
-    //
-    // Bootstrap has THREE modes of operation:
-    // App is Special "Component"     - Simply forces the application to always load the Special "Component".
-    // App is ./base/src/app.php      - In this mode we will load the application from this file and if execution isn't
-    //                                  otherwise terminated it will terminate here with a 404/PC LOAD LETTER.
-    // App is Entry point             - Return to the entry point but allow for the possibility of switching to one of
-    //                                  the other modes without adding or removing kBootstrap
-    //
-    // NOTE: Future behavior will have kBootstrap set to false by default.. like in a few weeks if not sooner.
-    if (kBootstrap) {
-      // The application effectively IS the special component
-      if (gRegistryUtils::GetKey('constant.appIsSpecialComponent')) {
-        gApplication::LoadComponent(kSpecialComponent);
-      }
-
-      // App is ./base/src/app.php
-      if (file_exists(gAppUtils::BuildPath(kRootPath, 'base', 'src', 'app.php'))) {
-        require_once(gAppUtils::BuildPath(kRootPath, 'base', 'src', 'app.php'));
-
-        if (gRegistryUtils::GetKey('app.path.0') == kSpecialComponent) {
-          gRegistryUtils::SetKey('app.component', kSpecialComponent);
-        }
-
-        gApplication::LoadComponent(gRegistryUtils::GetKey('app.component'));
-        gApplication::NotFound('PC LOAD LETTER');
-      }
-    }
-  }
-
-  /********************************************************************************************************************
-  * Set app config key
-  *********************************************************************************************************************/
-  public static function SetConfig(string $aDottedKey, mixed $aNewValue) {
-    $vNodes = ['constant', 'superglobal'];
-    $keyNodes = gAppUtils::ExplodeStr(kDot, $aDottedKey) ?? kEmptyArray;
-    $firstNode = $keyNodes[array_key_first($keyNodes)] ?? kEmptyString;
-    $lastNode = $keyNodes[array_key_last($keyNodes)] ?? kEmptyString;
-
-    if (gAppUtils::Contains($vNodes, $firstNode, gAppUtils::IN_ARRAY)) {
-      gApplication::Error('Setting values on virtual nodes is not supported.');
-    }
-
-    if (gAppUtils::Contains($lastNode, '[]', gAppUtils::ENDS_WITH)) {
-      $aDottedKey = substr($aDottedKey, 0, -2);
-      
-      $oldValue = gRegistryUtils::$sStore2->get($aDottedKey, kEmptyArray);
-
-      if ($oldValue && !is_array($oldValue)) {
-        $oldValue = [$oldValue];
-      }
-
-      $oldValue[] = $aNewValue;
-      $aNewValue = $oldValue;
-    }
-    else if (is_numeric($lastNode)) {
-      array_pop($keyNodes);
-      $truncatedDottedKey = implode(kDot, $keyNodes);
-      $oldValue = gRegistryUtils::$sStore2->get(implode(kDot, $keyNodes));
-
-      if (!$oldValue || !array_is_list($oldValue)) {
-        gApplication::Error('Using indexed keys can only be done if the value is already an indexed list.');
-      }
-
-      $oldValue[(int)$lastNode] = $aNewValue;
-      $aNewValue = $oldValue;
-      $aDottedKey = $truncatedDottedKey;
-    }
-
-    return gRegistryUtils::$sStore2->set($aDottedKey, $aNewValue);
-  }
-
-  /********************************************************************************************************************
-  * Loads a component.
-  *********************************************************************************************************************/
-  public static function LoadComponent(string $aComponent) {
-    if ($aComponent == kSpecialComponent) {
-      gApplication::SpecialComponent();
-    }
-
-    $componentPath = gRegistryUtils::GetKey('constant.components' . kDot . $aComponent);
-
-    if (!$componentPath) {
-      gApplication::NotFound('Unknown component.');
-    }
-
-    if (!file_exists($componentPath)) {
-      gApplication::NotFound('Failed to load the' . kSpace . $aComponent . kSpace .'component.');
-    }
-
-    gRegistryUtils::SetKey('app.componentPath', gAppUtils::BuildPath(kRootPath, 'components', $aComponent));
-    require_once($componentPath);
-  }
-
-  /********************************************************************************************************************
-  * Read a file
-  *********************************************************************************************************************/
-  public static function ReadFile(string $aFile) {
-    $rv = @file_get_contents($aFile);
-    return gApplication::EnsureValue($rv);
-  }
-
-  /********************************************************************************************************************
-  * General Error Function
-  *
-  * @param $aMessage   Error message
-  ********************************************************************************************************************/
-  public static function Error(?string $aMessage = null) {
-    if (!$aMessage) {
-      $aMessage = 'No further details were provided.';
-    }
-
-    gErrorUtils::report(['code' => E_ALL, 'message' => $aMessage,
-                         'file' => null, 'line' => null,
-                         'trace' => debug_backtrace(2)]);
-  }
-
-  /********************************************************************************************************************
-  * Sends 404 or prints error message if debug mode
-  ********************************************************************************************************************/
-  public static function NotFound(?string $aMessage = null) {
-    if (!$aMessage) {
-      $aMessage = 'HTTP/1.1 404 Not Found';
-    }
-
-    if (gRegistryUtils::Debug()) {
-      gErrorUtils::report(['code' => E_ALL, 'message' => $aMessage,
-                           'file' => null, 'line' => null,
-                           'trace' => debug_backtrace(2)]);
-    }
-    gConsoleUtils::Header(404);
-  }
-
-  /********************************************************************************************************************
-  * Check if a value should be null
-  ********************************************************************************************************************/
-  public static function EnsureValue($aValue, $aFallback = null) {
-    return (empty($aValue) || $aValue === 'none') ? $aFallback : $aValue;
-  }
-
-  /**********************************************************************************************************************
-  * Special Component!
-  ***********************************************************************************************************************/
-  public static function SpecialComponent() {
-    $spCurrentPath = gRegistryUtils::GetKey('app.path');
-    $spPathCount = gRegistryUtils::GetKey('app.depth');
-
-    if ($spCurrentPath[0] != kSpecialComponent) {
-      gConsoleUtils::Redirect(kSlash . kSpecialComponent . kSlash);
-    }
-
-    gRegistryUtils::SetKey('app.component', kSpecialComponent);
-
-    if (gRegistryUtils::GetKey('constant.disableSpecialComponent')) {
-      gApplication::NotFound('The special component has been disabled.');
-    }
-
-    gRegistryUtils::SetKey('console.content.sectionName', kSpecialComponentName);
-
-    // The Special Component never has more than one level below it
-    // We still have to determine the root of the component though...
-    if ($spPathCount == 1) {
-      // URL /special/
-      $spSpecialFunction = 'root';
-    }
-    else {
-      // URL /special/xxx/
-      if ($spPathCount > 2) {
-        gApplication::NotFound('The special component only has one path level.');
-      }
-      $spSpecialFunction = $spCurrentPath[1];
-    }
-
-    $spCommandBar = array(
-      '/special/'                 => kSpecialComponentName,
-      '/special/test/'            => 'Test Cases',
-      '/special/vc/'              => 'Version Compare',
-      '/special/guid/'            => 'GUID',
-      '/special/hex/'             => 'Hex String',
-    );
-
-    gRegistryUtils::SetKey('console.content.commandbar', gRegistryUtils::GetKey('constant.components.site') ?
-                                               array_merge(kDefaultMenu, $spCommandBar) :
-                                               $spCommandBar);
-
-    unset($spCurrentPath, $spPathCount, $spCommandBar);
-
-    switch ($spSpecialFunction) {
-      case 'root':
-        $spContent = '<h2>Welcome</h2>' .
-                     '<p>Please select a special function from the command bar above.';
-        gConsoleUtils::Content($spContent, ['title' => 'Overview']);
-        break;
-      case 'test':
-        if (!gRegistryUtils::Debug()) {
-          gApplication::NotFound('This special function is not available when not in debug mode.');
-        }
-        $spCase = gRegistryUtils::GetKey('superglobal.get.case');
-        $spTestsPath = gAppUtils::BuildPath(kRootPath, 'base', 'tests');
-        $spGlobTests = glob(gAppUtils::BuildPath($spTestsPath, kAsterisk . gApplication::FILE_EXT['php']));
-        $spTests = kEmptyArray;
-
-        foreach ($spGlobTests as $_value) {
-          $spTests[] = gAppUtils::Subst($_value, [gApplication::FILE_EXT['php'] => kEmptyString, $spTestsPath . kSlash => kEmptyString]);
-        }
-
-        if ($spCase) {
-          if (!gAppUtils::Contains($spCase, $spTests)) {
-            gApplication::Error('Unknown test case.');
-          }
-
-          gRegistryUtils::SetKey('special.testCase', $spCase);
-          require_once(gAppUtils::BuildPath($spTestsPath, $spCase . gApplication::FILE_EXT['php']));
-          headers_sent() ? exit() : gApplication::Error('The operation completed successfully.');
-        }
-
-        $spContent = kEmptyString;
-
-        foreach ($spTests as $_value) {
-          $spContent .= '<li><a href="/special/test/?case=' . $_value . '">' . $_value . '</a></li>';
-        }
-
-        $spContent = ($spContent == kEmptyString) ?
-                     '<p>There are no test cases.</p>' :
-                     '<h2>Please select a test case&hellip;</h2><ul>' . $spContent . '</ul>' . str_repeat('<br />', 3);
-
-        gConsoleUtils::Content($spContent, ['title' => 'Test Cases']);
-        break;
-      case 'vc':
-        $spCurrVer = gRegistryUtils::GetKey('superglobal.post.currVer');
-        $spCompVer = gRegistryUtils::GetKey('superglobal.post.compVer');
-
-        if ($spCurrVer && $spCompVer) {
-          gConsoleUtils::Content(gVersionCompare($spCurrVer, $spCompVer));
-        }
-
-        $spForm = '<form action="/special/vc/" method="post">Current Version:<br/><input type="text" name="currVer"><br/><br/>' .
-                  'Compare to Version:<br/><input type="text" name="compVer"><br/><br/><input type="submit"></form>';
-
-        gConsoleUtils::Content('<h2>nsIVersionComparator</h2>' . $spForm, ['title' => 'Runtime Status']);
-        break;
-      case 'guid':
-        gConsoleUtils::Content(gAppUtils::GlobalIdentifer(gRegistryUtils::GetKey('superglobal.get.vendor'), true),
-                 ['title' => 'Globally Unique Identifier (In XPIDL Notation)', 'textbox' => true]);
-        break;
-      case 'hex':
-        gConsoleUtils::Content(gAppUtils::HexString(gRegistryUtils::GetKey('superglobal.get.length', 40)),
-                 ['title' => 'Pseudo-Random Hex String', 'textbox' => true]);
-        break;
-      case 'system':
-        if (!gRegistryUtils::Debug()) {
-          gApplication::NotFound('This special function is not available when not in debug mode.');
-        }
-        gApplication::Header('html', true);
-        phpinfo(INFO_GENERAL | INFO_CONFIGURATION | INFO_ENVIRONMENT | INFO_VARIABLES);
-        break;
-      default:
-        gApplication::NotFound('There is no matching function in the special component.');
-    }
-
-    // We're done here
-    exit();
-  }
-  
-  /********************************************************************************************************************
-  * Access Super Globals
-  ********************************************************************************************************************/
-  public static function SuperGlobal($aNode, $aKey, $aDefault = null) {
-    $rv = null;
-
-    // Turn the variable type into all caps prefixed with an underscore
-    $aNode = kUnderbar . strtoupper($aNode);
-
-    // This handles the superglobals
-    switch($aNode) {
-      case '_CHECK':
-        $rv = gApplication::EnsureValue($aKey);
-        break;
-      case '_GET':
-        if (SAPI_IS_CLI && $GLOBALS['argc'] > 1) {
-          $args = kEmptyArray;
-
-          foreach (array_slice($GLOBALS['argv'], 1) as $_value) {
-            $arg = @explode('=', $_value);
-
-            if (count($arg) < 2) {
-              continue;
-            }
-
-            $attr = str_replace('--', kEmptyString, $arg[0]);
-            $val = gApplication::EnsureValue(str_replace('"', kEmptyString, $arg[1]));
-
-            if (!$attr && !$val) {
-              continue;
-            }
-
-            $args[$attr] = $val;
-          }
-
-          $rv = $args[$aKey] ?? $aDefault;
-          break;
-        }
-      case '_SERVER':
-      case '_ENV':
-      case '_FILES':
-      case '_POST':
-      case '_COOKIE':
-      case '_SESSION':
-        $rv = $GLOBALS[$aNode][$aKey] ?? $aDefault;
-        break;
-      default:
-        // We don't know WHAT was requested but it is obviously wrong...
-        gApplication::Error('Unknown system node.');
-    }
-    
-    // We always pass $_GET values through a general regular expression
-    // This allows only a-z A-Z 0-9 - / { } @ % whitespace and ,
-    if ($rv && $aNode == "_GET") {
-      $rv = preg_replace(gApplication::REGEX_PATTERNS['query'], kEmptyString, $rv);
-    }
-
-    // Files need special handling.. In principle we hard fail if it is anything other than
-    // OK or NO FILE
-    if ($rv && $aNode == "_FILES") {
-      if (!in_array($rv['error'], [UPLOAD_ERR_OK, UPLOAD_ERR_NO_FILE])) {
-        gApplication::Error('Upload of ' . $aKey . ' failed with error code: ' . $rv['error']);
-      }
-
-      // No file is handled as merely being null
-      if ($rv['error'] == UPLOAD_ERR_NO_FILE) {
-        return null;
-      }
-
-      // Cursory check the actual mime-type and replace whatever the web client sent
-      $rv['type'] = mime_content_type($rv['tmp_name']);
-    }
-    
-    return $rv;
-  }
-
-  /********************************************************************************************************************
-  * Registers Files to be included such as components and modules
-  *********************************************************************************************************************/
-  public static function RegisterIncludes($aConst, $aIncludes) {
-    $aConst = strtoupper($aConst);
-
-    if (defined($aConst)) {
-      gApplication::Error($aConst . kSpace . 'files are already registered and may not be updated.');
-    }
-
-    $includes = kEmptyArray;
-
-    foreach($aIncludes as $_key => $_value) { 
-      switch ($aConst) {
-        case 'COMPONENTS':
-          $includes[$_value] = gAppUtils::BuildPath(kRootPath, 'components', $_value, 'src', $_value . gApplication::FILE_EXT['php']);
-          break;
-        case 'MODULES':
-          $includes[$_value] = gAppUtils::BuildPath(kRootPath, 'modules', $_value . gApplication::FILE_EXT['php']);
-          break;
-        case 'LIBRARIES':
-          if (str_contains($_value, kDot . kDot)) {
-            return;
-          }
-
-          $includes[$_key] = gAppUtils::BuildPath(kRootPath, 'third_party', $_value);
-          break;
-        default:
-          gfError('Unknown include type');
-      }
-    }
-
-    define($aConst, $includes);
-  }
-
-  /********************************************************************************************************************
-  * Get the registry property and return it
-  ********************************************************************************************************************/
-  public static function Component(?string $aCompareComponent = null) {
-    $rv = (gApplication::$sInited) ? gApplication::GetKey('app.component') : gApplication::SuperGlobal('get', 'component', 'site');
-
-    if ($aCompareComponent) {
-      $rv = ($rv === $aCompareComponent);
-    }
-
-    return $rv;
-  }
-
-  /********************************************************************************************************************
-  * Get the registry property and return it
-  ********************************************************************************************************************/
-  public static function Debug() {
-    return (gApplication::$sInited) ? gApplication::GetKey('app.debug') : kDebugMode;
-  }
-
-  /********************************************************************************************************************
-  * Get the registry property and return it
-  ********************************************************************************************************************/
-  public static function GetStore() {
-    return gApplication::$sStore;
-  }
-}
-
-// ====================================================================================================================
-
-// == | Application Utilities | =======================================================================================
-
-class gAppUtils {
-  const CONTAINS = kZero;
-  const STARTS_WITH = kPosOne;
-  const ENDS_WITH = kNegOne;
-  const IN_ARRAY = kZero;
-  const KEY_EXISTS = kPosOne;
-
-  // --------------------------------------------------------------------------------------------------------------------
-
-  const PASSWORD_CLEARTEXT    = "clrtxt";
-  const PASSWORD_HTACCESS     = "apr1";
-  const BASE64_ALPHABET       = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
-  const APRMD5_ALPHABET       = './0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
-
-  // --------------------------------------------------------------------------------------------------------------------
-
   /**********************************************************************************************************************
   * gAppUtils::Subst
   ***********************************************************************************************************************/
@@ -733,7 +739,7 @@ class gAppUtils {
       $rv = call_user_func($replaceFunction, ($aRegEx ? kSlash . $_key . kSlash . 'iU' : $_key), $_value, $rv);
     }
 
-    return !$rv ? gApplication::Error('Something has gone wrong...') : $rv;
+    return !$rv ? gMetropolis::Error('Something has gone wrong...') : $rv;
   } 
     
   /**********************************************************************************************************************
@@ -870,7 +876,7 @@ class gAppUtils {
         if (str_contains($aPassword, kDollar)) {
           // Since the dollar sign is used as an identifier and/or separator for hashes we can't use passwords
           // that contain said dollar sign.
-          gApplication::Error('Cannot "hash" this Clear Text password because it contains a dollar sign.');
+          gMetropolis::Error('Cannot "hash" this Clear Text password because it contains a dollar sign.');
         }
 
         return kDollar . gAppUtils::PASSWORD_CLEARTEXT . kDollar . time() . kDollar . $aPassword;
@@ -946,7 +952,7 @@ class gAppUtils {
       $password = gAppUtils::ExplodeStr(kDollar, $aHash) ?? null;
 
       if ($password == null || count($password) > 3) {
-        gApplication::Error('Unable to "verify" this Clear Text "hashed" password.');
+        gMetropolis::Error('Unable to "verify" this Clear Text "hashed" password.');
       }
 
       return $aPassword === $password[2];
@@ -957,7 +963,7 @@ class gAppUtils {
       $salt = gAppUtils::ExplodeStr(kDollar, $aHash)[1] ?? null;
 
       if(!$salt) {
-        gApplication::Error('Unable to verify this Apache APR1-MD5 hashed password.');
+        gMetropolis::Error('Unable to verify this Apache APR1-MD5 hashed password.');
       }
 
       return gAppUtils::PasswordHash($aPassword, gAppUtils::PASSWORD_HTACCESS, $salt) === $aHash;
@@ -974,7 +980,7 @@ class gAppUtils {
   public static function GlobalIdentifer(?string $aVendor = null, ?bool $aXPCOM = null) {
     if ($aVendor) {
       if (strlen($aVendor) < 3) {
-        gApplication::Error('v4bis GUIDs require a defined vendor of more than three characters long.');
+        gMetropolis::Error('v4bis GUIDs require a defined vendor of more than three characters long.');
       }
 
       // Generate 8 pseudo-random bytes
@@ -1101,8 +1107,8 @@ class gErrorUtils {
   * Output details about a failure condition
   ******************************************************************************************************************/
   public static function report(array $aMetadata) {
-    if (gRegistryUtils::Debug() && gApplication::SuperGlobal('get', 'runtime')) {
-      gConsoleUtils::Output((self::kPhpErrorCodes[$aMetadata['code']] ?? self::kPhpErrorCodes[E_ALL]) . kSpaceDashSpace . $aMetadata['message']);
+    if (gShitRegConfig::Debug() && gMetropolis::SuperGlobal('get', 'runtime')) {
+      gConUtils::Output((self::kPhpErrorCodes[$aMetadata['code']] ?? self::kPhpErrorCodes[E_ALL]) . kSpaceDashSpace . $aMetadata['message']);
     }
 
     $traceline = fn($eFile, $eLine) => str_replace(kRootPath, kEmptyString, $eFile) . kColon . $eLine;
@@ -1134,18 +1140,18 @@ class gErrorUtils {
 
       $commandBar = ['onclick="history.back()"' => 'Go Back'];
 
-      if (gRegistryUtils::Component(kSpecialComponent) || !gRegistryUtils::GetKey('constant.components.site')) {
-        gRegistryUtils::SetKey('console.content.commandbar', array_merge($commandBar, ['/special/' => kSpecialComponentName]));
+      if (gShitRegConfig::Component(kSpecialComponent) || !gShitRegConfig::GetKey('constant.components.site')) {
+        gShitRegConfig::SetKey('console.content.commandbar', array_merge($commandBar, ['/special/' => kSpecialComponentName]));
       }
       else {
-        gRegistryUtils::SetKey('console.content.commandbar', array_merge($commandBar, kDefaultMenu));
+        gShitRegConfig::SetKey('console.content.commandbar', array_merge($commandBar, kDefaultMenu));
       }
 
-      gRegistryUtils::SetKey('console.content.sectionName', kEmptyString);
-      gConsoleUtils::Content($content, ['title' => $title, 'statustext' => 'Please contact a system administrator.']);
+      gShitRegConfig::SetKey('console.content.sectionName', kEmptyString);
+      gConUtils::Content($content, ['title' => $title, 'statustext' => 'Please contact a system administrator.']);
     }
 
-    gConsoleUtils::Output(['title'=> $title, 'content' => ['errorMessage' => $content, 'traceback' => $trace]]);
+    gConUtils::Output(['title'=> $title, 'content' => ['errorMessage' => $content, 'traceback' => $trace]]);
   }
 
   /******************************************************************************************************************
@@ -1173,7 +1179,7 @@ class gErrorUtils {
 
 // == | Static Output Class | =========================================================================================
 
-class gConsoleUtils {
+class gConUtils {
   const HTTP_HEADERS = array(
     404                       => 'HTTP/1.1 404 Not Found',
     501                       => 'HTTP/1.1 501 Not Implemented',
@@ -1220,7 +1226,7 @@ class gConsoleUtils {
   *
   * @dep HTTP_HEADERS
   * @dep kDebugMode
-  * @dep gApplication::Error()
+  * @dep gMetropolis::Error()
   * @param $aHeader    Short name of header
   **********************************************************************************************************************/
   public static function Header(string|int $aHeader, bool $aSendAllOnContentType = false) { 
@@ -1247,18 +1253,18 @@ class gConsoleUtils {
       }
     }
 
-    return gRegistryUtils::SetKey('console.output.httpHeaders[]', $aHeader);
+    return gShitRegConfig::SetKey('console.output.httpHeaders[]', $aHeader);
   }
 
   /********************************************************************************************************************
   * Gets or sets the "default" content type so we don't have to output the header ourselves in most cases.
   ********************************************************************************************************************/
   public static function SendHeaders() {
-    $responseCode = gRegistryUtils::GetKey('console.output.responseCode', 200);
-    gRegistryUtils::SetKey('console.output.httpHeaders[]', 'Content-type'. kColon . kSpace . gRegistryUtils::GetKey('console.output.contentType'));
-    gRegistryUtils::SetKey('console.output.httpHeaders[]', 'HTTP/1.1' . kSpace . $responseCode . kSpace . self::HTTP_STATUS_CODE[$responseCode]);
+    $responseCode = gShitRegConfig::GetKey('console.output.responseCode', 200);
+    gShitRegConfig::SetKey('console.output.httpHeaders[]', 'Content-type'. kColon . kSpace . gShitRegConfig::GetKey('console.output.contentType'));
+    gShitRegConfig::SetKey('console.output.httpHeaders[]', 'HTTP/1.1' . kSpace . $responseCode . kSpace . self::HTTP_STATUS_CODE[$responseCode]);
 
-    $headers = gRegistryUtils::GetKey('console.output.httpHeaders', kEmptyArray);
+    $headers = gShitRegConfig::GetKey('console.output.httpHeaders', kEmptyArray);
 
     foreach ($headers as $_value) {
       header(trim($_value), true);
@@ -1270,11 +1276,11 @@ class gConsoleUtils {
   ********************************************************************************************************************/
   public static function HttpStatusCode(?string $aStatusCode = null) {
     if (!$aStatusCode) {
-      gRegistryUtils::GetKey('console.output.responseCode', 200);
+      gShitRegConfig::GetKey('console.output.responseCode', 200);
     }
 
     if (gAppUtils::Contains(self::HTTP_STATUS_CODE, $aStatusCode, 1)) {
-      gRegistryUtils::SetKey('console.output.responseCode', $aStatusCode);
+      gShitRegConfig::SetKey('console.output.responseCode', $aStatusCode);
     }
   }
 
@@ -1283,11 +1289,11 @@ class gConsoleUtils {
   ********************************************************************************************************************/
   public static function ContentType(?string $aContentType = null) {
      if ($aContentType === null) {
-      return gRegistryUtils::GetKey('console.output.contentType');
+      return gShitRegConfig::GetKey('console.output.contentType');
     }
 
     if (gAppUtils::Contains(self::MIME_TYPES, $aContentType, 1)) {
-      return gRegistryUtils::SetKey('console.output.contentType', self::MIME_TYPES[$aContentType]);
+      return gShitRegConfig::SetKey('console.output.contentType', self::MIME_TYPES[$aContentType]);
     }
   }
 
@@ -1323,11 +1329,11 @@ class gConsoleUtils {
   public static function Output(mixed $aContent, ?string $aHeader = 'text') {
     $content = null;
 
-    if (gRegistryUtils::Debug() && gApplication::SuperGlobal('get', 'runtime')) {
-      $content = array_merge(gRegistryUtils::GetStore(), ['superglobal' => $GLOBALS]);
+    if (gShitRegConfig::Debug() && gMetropolis::SuperGlobal('get', 'runtime')) {
+      $content = array_merge(gShitRegConfig::GetStore(), ['superglobal' => $GLOBALS]);
       $content['console']['output']['responseBody'] = $aContent;
-      $content['console']['output']['responseTime'] = microtime(true) - gApplication::SuperGlobal('server', 'REQUEST_TIME_FLOAT', 0);
-      $content = json_encode($content, gApplication::JSON_ENCODE_FLAGS['display']);
+      $content['console']['output']['responseTime'] = microtime(true) - gMetropolis::SuperGlobal('server', 'REQUEST_TIME_FLOAT', 0);
+      $content = json_encode($content, gAppUtils::JSON_ENCODE_FLAGS['display']);
       self::Header('text', true);
       print($content);
       exit();
@@ -1346,7 +1352,7 @@ class gConsoleUtils {
       $content = $aContent ?? kEmptyString;
     }
 
-    $content = (is_string($content) || is_int($content)) ? $content : json_encode($content, gApplication::JSON_ENCODE_FLAGS['display']);
+    $content = (is_string($content) || is_int($content)) ? $content : json_encode($content, gAppUtils::JSON_ENCODE_FLAGS['display']);
 
     // Send the header if not cli
     if (SAPI_IS_CLI) {
@@ -1374,11 +1380,11 @@ class gConsoleUtils {
   * Basic Site Content Generation using a Special Template
   ******************************************************************************************************************/
   public static function Content(mixed $aContent, array $aMetadata = kEmptyArray) {
-    $template = SAPI_IS_CLI ? false : gApplication::ReadFile(gAppUtils::BuildPath(kRootPath, 'base', 'skin', 'template.xhtml'));
-    $stylesheet = SAPI_IS_CLI ? false : gApplication::ReadFile(gAppUtils::BuildPath(kRootPath, 'base', 'skin', 'stylesheet.css'));
+    $template = SAPI_IS_CLI ? false : gMetropolis::ReadFile(gAppUtils::BuildPath(kRootPath, 'base', 'skin', 'template.xhtml'));
+    $stylesheet = SAPI_IS_CLI ? false : gMetropolis::ReadFile(gAppUtils::BuildPath(kRootPath, 'base', 'skin', 'stylesheet.css'));
 
     if (!$template) {
-      gConsoleUtils::Output(['content' => $aContent, 'title' => $aMetadata['title'] ?? 'Output']);
+      gConUtils::Output(['content' => $aContent, 'title' => $aMetadata['title'] ?? 'Output']);
     }
 
     $content = $aContent;
@@ -1412,28 +1418,28 @@ class gConsoleUtils {
     }
 
     if ($metadata('textbox')) {
-      $content = (is_string($content) || is_int($content)) ? $content : json_encode($content, gApplication::JSON_ENCODE_FLAGS['display']);
+      $content = (is_string($content) || is_int($content)) ? $content : json_encode($content, gAppUtils::JSON_ENCODE_FLAGS['display']);
       $content = '<form><textarea class="special-textbox" name="content" rows="30" readonly>' . $content . '</textarea></form>';
     }
 
-    $siteName = gRegistryUtils::GetKey('console.content.siteName', kAppName);
-    $sectionName = gRegistryUtils::GetKey('console.content.sectionName', kEmptyString);
+    $siteName = gShitRegConfig::GetKey('console.content.siteName', kAppName);
+    $sectionName = gShitRegConfig::GetKey('console.content.sectionName', kEmptyString);
 
     if ($sectionName) {
       $siteName = $sectionName . kSpaceDashSpace . $siteName;
     }
 
-    $isTestCase = (!$metadata('title') && gRegistryUtils::GetKey('special.testCase') && gRegistryUtils::Component(kSpecialComponent));
+    $isTestCase = (!$metadata('title') && gShitRegConfig::GetKey('special.testCase') && gShitRegConfig::Component(kSpecialComponent));
 
     $substs = array(
       '{$SITE_STYLESHEET}'  => $stylesheet ?? kEmptyString,
       '{$PAGE_CONTENT}'     => $content,
-      '{$SITE_DOMAIN}'      => gApplication::SuperGlobal('server', 'SERVER_NAME'),
+      '{$SITE_DOMAIN}'      => gMetropolis::SuperGlobal('server', 'SERVER_NAME'),
       '{$SITE_NAME}'        => $siteName,
-      '{$SITE_MENU}'        => $menuize(gRegistryUtils::GetKey('console.content.commandbar')),
+      '{$SITE_MENU}'        => $menuize(gShitRegConfig::GetKey('console.content.commandbar')),
       '{$SITE_SECTION}'     => $sectionName ?? kEmptyString,
-      '{$PAGE_TITLE}'       => $isTestCase ? '[Test]' . kSpace . gRegistryUtils::GetKey('special.testCase') : ($metadata('title') ?? 'Output'),
-      '{$PAGE_STATUS}'      => $metadata('statustext') ?? gRegistryUtils::GetKey('console.content.statustext'),
+      '{$PAGE_TITLE}'       => $isTestCase ? '[Test]' . kSpace . gShitRegConfig::GetKey('special.testCase') : ($metadata('title') ?? 'Output'),
+      '{$PAGE_STATUS}'      => $metadata('statustext') ?? gShitRegConfig::GetKey('console.content.statustext'),
       '{$SKIN_PATH}'        => gAppUtils::BuildPath(kSlash, 'base', 'skin'),
       '{$SOFTWARE_VENDOR}'  => kAppVendor,
       '{$SOFTWARE_NAME}'    => kAppName,
@@ -1443,7 +1449,7 @@ class gConsoleUtils {
     $content = gAppUtils::Subst($template, $substs);
 
     @ob_end_clean();
-    gConsoleUtils::Output($content, 'html');
+    gConUtils::Output($content, 'html');
   }
 
   /**********************************************************************************************************************
@@ -1510,12 +1516,12 @@ class gConsoleUtils {
       $xml = $dom->saveXML();
 
       if (!$xml) {
-        gApplication::Error('Could not generate extensible markup.');
+        gMetropolis::Error('Could not generate extensible markup.');
       }
     }
 
     if ($aDirectOutput) {
-      gConsoleUtils::Output($xml, 'xml');
+      gConUtils::Output($xml, 'xml');
     }
 
     return $xml;
@@ -1526,7 +1532,7 @@ class gConsoleUtils {
 
 // == | Static Registry Class | =======================================================================================
 
-class gRegistryUtils {
+class gShitRegConfig {
   private static $sInited = false;
   private static $sStore  = kEmptyArray;
   public  static $sStore2 = kEmptyArray;
@@ -1545,22 +1551,22 @@ class gRegistryUtils {
       return implode(kDot, $aReturnSub ? array_slice($host, 0, -2) : array_slice($host, -2, 2));
     };
 
-    $path = gAppUtils::ExplodePath(gApplication::SuperGlobal('get', 'path', kSlash));
+    $path = gAppUtils::ExplodePath(gMetropolis::SuperGlobal('get', 'path', kSlash));
 
     self::$sStore = array(
       'app' => array(
-        'component'   => gApplication::SuperGlobal('get', 'component', 'site'),
+        'component'   => gMetropolis::SuperGlobal('get', 'component', 'site'),
         'path'        => $path,
         'depth'       => count($path ?? kEmptyArray),
         'debug'       => kDebugMode,
         'offline'     => file_exists(gAppUtils::BuildPath(kRootPath, '.offline')),
       ),
       'network' => array(
-        'scheme'      => gApplication::SuperGlobal('server', 'SCHEME') ?? (gApplication::SuperGlobal('server', 'HTTPS') ? 'https' : 'http'),
-        'baseDomain'  => $domain(gApplication::SuperGlobal('server', 'SERVER_NAME', 'localhost')),
-        'subDomain'   => $domain(gApplication::SuperGlobal('server', 'SERVER_NAME', 'localhost'), true),
-        'remoteAddr'  => gApplication::SuperGlobal('server', 'HTTP_X_FORWARDED_FOR', gApplication::SuperGlobal('server', 'REMOTE_ADDR', '127.0.0.1')),
-        'userAgent'   => gApplication::SuperGlobal('server', 'HTTP_USER_AGENT', 'php' . kDash . PHP_SAPI . kSlash . PHP_VERSION),
+        'scheme'      => gMetropolis::SuperGlobal('server', 'SCHEME') ?? (gMetropolis::SuperGlobal('server', 'HTTPS') ? 'https' : 'http'),
+        'baseDomain'  => $domain(gMetropolis::SuperGlobal('server', 'SERVER_NAME', 'localhost')),
+        'subDomain'   => $domain(gMetropolis::SuperGlobal('server', 'SERVER_NAME', 'localhost'), true),
+        'remoteAddr'  => gMetropolis::SuperGlobal('server', 'HTTP_X_FORWARDED_FOR', gMetropolis::SuperGlobal('server', 'REMOTE_ADDR', '127.0.0.1')),
+        'userAgent'   => gMetropolis::SuperGlobal('server', 'HTTP_USER_AGENT', 'php' . kDash . PHP_SAPI . kSlash . PHP_VERSION),
       ),
       'console' => array(
         'output' => array(
@@ -1582,7 +1588,7 @@ class gRegistryUtils {
 
     if (defined('kDebugDomain') && !SAPI_IS_CLI) {
       self::$sStore['app']['debug'] =
-        (gApplication::SuperGlobal('server', 'SERVER_NAME', 'localhost') != constant('kDebugDomain') ?? kEmptyString) ?
+        (gMetropolis::SuperGlobal('server', 'SERVER_NAME', 'localhost') != constant('kDebugDomain') ?? kEmptyString) ?
         file_exists(gAppUtils::BuildPath(kRootPath, '.debugMode')) :
         !kDebugMode;
     }
@@ -1596,7 +1602,7 @@ class gRegistryUtils {
   * Get the registry property and return it
   ********************************************************************************************************************/
   public static function Component(?string $aCompareComponent = null) {
-    $rv = (self::$sInited) ? self::GetKey('app.component') : gApplication::SuperGlobal('get', 'component', 'site');
+    $rv = (self::$sInited) ? self::GetKey('app.component') : gMetropolis::SuperGlobal('get', 'component', 'site');
 
     if ($aCompareComponent) {
       $rv = ($rv === $aCompareComponent);
@@ -1658,21 +1664,21 @@ class gRegistryUtils {
           }
 
           unset($keys[0], $keys[1]);
-          $rv = \Illuminate\Support\Arr::get($rv, gApplication::EnsureValue(implode(kDot, $keys)), $aDefault);
+          $rv = \Illuminate\Support\Arr::get($rv, gMetropolis::EnsureValue(implode(kDot, $keys)), $aDefault);
           break;
         case 'superglobal':
           if (count($keys) < 3) {
             return null;
           }
 
-          $rv = gApplication::SuperGlobal($keys[1], $keys[2]);
+          $rv = gMetropolis::SuperGlobal($keys[1], $keys[2]);
 
           if (!Illuminate\Support\Arr::accessible($rv)) {
             return $rv ?? $aDefault;
           }
 
           unset($keys[0], $keys[1]);
-          $rv = \Illuminate\Support\Arr::get($rv, gApplication::EnsureValue(implode(kDot, $keys)), $aDefault);
+          $rv = \Illuminate\Support\Arr::get($rv, gMetropolis::EnsureValue(implode(kDot, $keys)), $aDefault);
           break;
         default:
           if (count($keys) < 2 || str_starts_with($keys[1], kUnderbar)) {
@@ -1680,7 +1686,7 @@ class gRegistryUtils {
           }
 
           unset($keys[0]);
-          $rv = \Illuminate\Support\Arr::get($GLOBALS, gApplication::EnsureValue(implode(kDot, $keys)), $aDefault);
+          $rv = \Illuminate\Support\Arr::get($GLOBALS, gMetropolis::EnsureValue(implode(kDot, $keys)), $aDefault);
       }
     }
     else {
@@ -1695,12 +1701,12 @@ class gRegistryUtils {
   ********************************************************************************************************************/
   public static function SetKey(string $aKey, string|int|bool|array|null $aValue) {
     if (in_array(gAppUtils::ExplodeStr(kDot, $aKey)[0] ?? kEmptyString, self::$sRemap)) {
-      gApplication::Error('Setting values on virtual nodes is not supported.');
+      gMetropolis::Error('Setting values on virtual nodes is not supported.');
     }
 
     if (gAppUtils::Contains($aKey, '[]', -1)) {
       $aKey = substr($aKey, 0, -2);
-      $value = gRegistryUtils::GetKey($aKey, kEmptyArray);
+      $value = gShitRegConfig::GetKey($aKey, kEmptyArray);
 
       if (!is_array($value)) {
         $value = [$value];
@@ -2870,7 +2876,7 @@ class Arr {
 namespace { // ========================================================================================================
 
 // You have entered grid 9-2 of sub-junction 12.. Proceed.
-gApplication::init();
+gMetropolis::init();
 
 } // ==================================================================================================================
 // ====================================================================================================================
