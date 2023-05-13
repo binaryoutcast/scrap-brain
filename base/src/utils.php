@@ -283,6 +283,61 @@ class gMetropolis {
   /********************************************************************************************************************
   * Set app config key
   *********************************************************************************************************************/
+  public static function GetConfig(string $aDottedKey, mixed $aFallback = null) {
+    $vNodes = ['constant', 'superglobal'];
+    $keyNodes = gAppUtils::ExplodeStr(kDot, $aDottedKey) ?? kEmptyArray;
+    $firstNode = $keyNodes[array_key_first($keyNodes)] ?? kEmptyString;
+    $rv = null;
+
+    if (gAppUtils::Contains($vNodes, $firstNode, gAppUtils::IN_ARRAY)) {
+      $dot = new \Adbar\Dot();
+      switch($firstNode) {
+        case 'constant':
+          if (count($keyNodes) < 2) { return $aFallback; }
+
+          $ucConst = strtoupper($keys[1]);
+          $prefixConst = 'k' . ucfirst($keys[1]);
+
+          switch (true) {
+            case defined($prefixConst):
+              $rv = constant($prefixConst);
+              break;
+            case defined($ucConst):
+              $rv = constant($ucConst);
+              break;
+            case defined($keys[1]):
+              $rv = constant($keys[1]);
+              break;
+            default:
+              return null;
+          }
+
+          if (!\Illuminate\Support\Arr::accessible($rv)) {
+            return $rv ?? $aFallback;
+          }
+
+          unset($keys[0], $keys[1]);
+          $rv = \Illuminate\Support\Arr::get($rv, gMetropolis::EnsureValue(implode(kDot, $keys)), $aFallback);
+          break;
+        case 'superglobal':
+          if (count($keyNodes) < 3) { return $aFallback; }
+          $rv = gMetropolis::SuperGlobal($keyNodes[1], $keyNodes[2]);
+          if (!(is_array($rv) || $rv instanceof ArrayAccess)) { return $rv ?? $aFallback; }
+          unset($keyNodes[0], $keyNodes[1]);
+          $rv = $dot->setArray($rv)->get(implode(kDot, $keyNodes), $aFallback);
+          break;
+        default:
+          break;
+      }
+    }
+    else { $rv = gShitRegConfig::$sStore2->get($aDottedKey, $aFallback); }
+
+    return $rv; 
+  }
+
+  /********************************************************************************************************************
+  * Set app config key
+  *********************************************************************************************************************/
   public static function SetConfig(string $aDottedKey, mixed $aNewValue) {
     $vNodes = ['constant', 'superglobal'];
     $keyNodes = gAppUtils::ExplodeStr(kDot, $aDottedKey) ?? kEmptyArray;
