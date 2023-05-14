@@ -20,7 +20,7 @@ if (defined('kUtilities')) {
 }
 
 // Define that this is a thing which can double as a version check.
-define('kUtilities', '2.0.0a1');
+define('kUtilities', '2.0.0b1');
 
 // --------------------------------------------------------------------------------------------------------------------
 
