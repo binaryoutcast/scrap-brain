@@ -14,7 +14,7 @@ gRegisterIncludes('LIBRARIES', array(
 
 // --------------------------------------------------------------------------------------------------------------------
 
-if (gShitRegConfig::Component('aus')) {
+if (gMetropolis::Component('aus')) {
   gRegSet('app.component', 'aus');
   gConUtils::extensibleMarkup(gAppUtils::TAG_XML . kNewLine . kLessThan . 'updates' . kSlash . kGreaterThan, true);
 }

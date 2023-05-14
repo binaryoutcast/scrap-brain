@@ -3,20 +3,11 @@
 * License, v. 2.0. If a copy of the MPL was not distributed with this
 * file, You can obtain one at http://mozilla.org/MPL/2.0/.
 *
-* Portions of this file are under other licenses. This is noted where
-* it is relevant.
+* Portions of this file are under other licenses separated by namespace
+* boundaries. This is noted were applicable.
 **********************************************************************************************************************/
 
 namespace { // == | Setup and Global Constants | ======================================================================
-
-const kUtilsPhpMinVersion = '8.1';
-
-// Check that we can run on this version of PHP
-if (mozilla\vc\ToolkitVersionComparator::compare(PHP_VERSION, kUtilsPhpMinVersion) < 0) {
-  die('BinOC Metropolis Utilities: PHP ' . kUtilsPhpMinVersion . ' or newer is required.');
-}
-
-// --------------------------------------------------------------------------------------------------------------------
 
 // Check for kRootPath
 if (!defined('kRootPath')) {
@@ -33,7 +24,7 @@ define('kUtilities', '2.0.0a1');
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// These constants must be defined because they might be used before gShitRegConfig is init'd
+// These constants must be defined because they might be used before gMetropolis is init'd
 if (!defined('kAppVendor'))             { define('kAppVendor', 'Binary Outcast'); }
 if (!defined('kAppName'))               { define('kAppName', 'Metropolis-based Software'); }
 if (!defined('kAppVersion'))            { define('kAppVersion', kUtilities); }
@@ -194,7 +185,6 @@ class gMetropolis {
     // ------------------------------------------------------------------------------------------------------------------
     
     // Init any other static classes
-    gShitRegConfig::init();
     gErrorUtils::init();
 
     // ------------------------------------------------------------------------------------------------------------------
@@ -205,12 +195,11 @@ class gMetropolis {
       function gError                       (...$args) { return gMetropolis::Error(...$args); }
       function gNotFound                    (...$args) { return gMetropolis::gNotFound(...$args); }
       function gReadFile                    (...$args) { return gMetropolis::ReadFile(...$args); }
+      function gGetConfig                   (...$args) { return gMetropolis::GetConfig(...$args); }
+      function gSetConfig                   (...$args) { return gMetropolis::SetConfig(...$args); }
 
     // Console
       function gOutput                      (...$args) { return gConUtils::Output(...$args); }
-
-    // Mozilla Toolkit Vc
-      function gVersionCompare              (...$args) { return mozilla\vc\ToolkitVersionComparator::compare(...$args); }
 
     // ------------------------------------------------------------------------------------------------------------------
 
@@ -233,8 +222,8 @@ class gMetropolis {
       function gGlobalIdentifer             (...$args) { return gAppUtils::GlobalIdentifer(...$args); }
 
       // Registry
-      function gRegistry                    (...$args) { return gShitRegConfig::GetKey(...$args); }
-      function gRegSet                      (...$args) { return gShitRegConfig::SetKey(...$args); }
+      function gRegistry                    (...$args) { return gMetropolis::GetConfig(...$args); }
+      function gRegSet                      (...$args) { return gMetropolis::SetConfig(...$args); }
 
       // Console
       function gHeader                      (...$args) { return gConUtils::Header(...$args); }
@@ -245,7 +234,6 @@ class gMetropolis {
     }
 
     // ------------------------------------------------------------------------------------------------------------------
-
 
     gMetropolis::$sInitialized = true;
 
@@ -262,7 +250,7 @@ class gMetropolis {
     // NOTE: Future behavior will have kBootstrap set to false by default.. like in a few weeks if not sooner.
     if (kBootstrap) {
       // The application effectively IS the special component
-      if (gShitRegConfig::GetKey('constant.appIsSpecialComponent')) {
+      if (gMetropolis::GetConfig('constant.appIsSpecialComponent')) {
         gMetropolis::LoadComponent(kSpecialComponent);
       }
 
@@ -270,11 +258,11 @@ class gMetropolis {
       if (file_exists(gAppUtils::BuildPath(kRootPath, 'base', 'src', 'app.php'))) {
         require_once(gAppUtils::BuildPath(kRootPath, 'base', 'src', 'app.php'));
 
-        if (gShitRegConfig::GetKey('app.path.0') == kSpecialComponent) {
-          gShitRegConfig::SetKey('app.component', kSpecialComponent);
+        if (gMetropolis::GetConfig('app.path.0') == kSpecialComponent) {
+          gMetropolis::SetConfig('app.component', kSpecialComponent);
         }
 
-        gMetropolis::LoadComponent(gShitRegConfig::GetKey('app.component'));
+        gMetropolis::LoadComponent(gMetropolis::GetConfig('app.component'));
         gMetropolis::NotFound('PC LOAD LETTER');
       }
     }
@@ -284,19 +272,18 @@ class gMetropolis {
   * Set app config key
   *********************************************************************************************************************/
   public static function GetConfig(string $aDottedKey, mixed $aFallback = null) {
-    $vNodes = ['constant', 'superglobal'];
-    $keyNodes = gAppUtils::ExplodeStr(kDot, $aDottedKey) ?? kEmptyArray;
-    $firstNode = $keyNodes[array_key_first($keyNodes)] ?? kEmptyString;
     $rv = null;
 
-    if (gAppUtils::Contains($vNodes, $firstNode, gAppUtils::IN_ARRAY)) {
+    if (gAppUtils::Contains($aDottedKey, gAppUtils::VIRTUAL_NODES, gAppUtils::STARTS_WITH)) {
+      $keyNodes = gAppUtils::ExplodeStr(kDot, $aDottedKey) ?? kEmptyArray;
+      $firstNode = $keyNodes[array_key_first($keyNodes)] ?? kEmptyString;
       $dot = new \Adbar\Dot();
       switch($firstNode) {
         case 'constant':
           if (count($keyNodes) < 2) { return $aFallback; }
 
-          $ucConst = strtoupper($keys[1]);
-          $prefixConst = 'k' . ucfirst($keys[1]);
+          $ucConst = strtoupper($keyNodes[1]);
+          $prefixConst = 'k' . ucfirst($keyNodes[1]);
 
           switch (true) {
             case defined($prefixConst):
@@ -305,19 +292,16 @@ class gMetropolis {
             case defined($ucConst):
               $rv = constant($ucConst);
               break;
-            case defined($keys[1]):
-              $rv = constant($keys[1]);
+            case defined($keyNodes[1]):
+              $rv = constant($keyNodes[1]);
               break;
             default:
               return null;
           }
 
-          if (!\Illuminate\Support\Arr::accessible($rv)) {
-            return $rv ?? $aFallback;
-          }
-
-          unset($keys[0], $keys[1]);
-          $rv = \Illuminate\Support\Arr::get($rv, gMetropolis::EnsureValue(implode(kDot, $keys)), $aFallback);
+          if (!(is_array($rv) || $rv instanceof ArrayAccess)) { return $rv ?? $aFallback; }
+          unset($keyNodes[0], $keyNodes[1]);
+          $rv = $dot->setArray($rv)->get(implode(kDot, $keyNodes), $aFallback);
           break;
         case 'superglobal':
           if (count($keyNodes) < 3) { return $aFallback; }
@@ -327,10 +311,10 @@ class gMetropolis {
           $rv = $dot->setArray($rv)->get(implode(kDot, $keyNodes), $aFallback);
           break;
         default:
-          break;
+          return null;
       }
     }
-    else { $rv = gShitRegConfig::$sStore2->get($aDottedKey, $aFallback); }
+    else { $rv = gMetropolis::$sRuntimeConfiguration->get($aDottedKey, $aFallback); }
 
     return $rv; 
   }
@@ -339,19 +323,18 @@ class gMetropolis {
   * Set app config key
   *********************************************************************************************************************/
   public static function SetConfig(string $aDottedKey, mixed $aNewValue) {
-    $vNodes = ['constant', 'superglobal'];
     $keyNodes = gAppUtils::ExplodeStr(kDot, $aDottedKey) ?? kEmptyArray;
     $firstNode = $keyNodes[array_key_first($keyNodes)] ?? kEmptyString;
     $lastNode = $keyNodes[array_key_last($keyNodes)] ?? kEmptyString;
 
-    if (gAppUtils::Contains($vNodes, $firstNode, gAppUtils::IN_ARRAY)) {
+    if (gAppUtils::Contains(gAppUtils::VIRTUAL_NODES, $firstNode, gAppUtils::IN_ARRAY)) {
       gMetropolis::Error('Setting values on virtual nodes is not supported.');
     }
 
     if (gAppUtils::Contains($lastNode, '[]', gAppUtils::ENDS_WITH)) {
       $aDottedKey = substr($aDottedKey, 0, -2);
       
-      $oldValue = gShitRegConfig::$sStore2->get($aDottedKey, kEmptyArray);
+      $oldValue = gMetropolis::$sRuntimeConfiguration->get($aDottedKey, kEmptyArray);
 
       if ($oldValue && !is_array($oldValue)) {
         $oldValue = [$oldValue];
@@ -363,7 +346,7 @@ class gMetropolis {
     else if (is_numeric($lastNode)) {
       array_pop($keyNodes);
       $truncatedDottedKey = implode(kDot, $keyNodes);
-      $oldValue = gShitRegConfig::$sStore2->get(implode(kDot, $keyNodes));
+      $oldValue = gMetropolis::$sRuntimeConfiguration->get(implode(kDot, $keyNodes));
 
       if (!$oldValue || !array_is_list($oldValue)) {
         gMetropolis::Error('Using indexed keys can only be done if the value is already an indexed list.');
@@ -374,7 +357,7 @@ class gMetropolis {
       $aDottedKey = $truncatedDottedKey;
     }
 
-    return gShitRegConfig::$sStore2->set($aDottedKey, $aNewValue);
+    return gMetropolis::$sRuntimeConfiguration->set($aDottedKey, $aNewValue);
   }
 
   /********************************************************************************************************************
@@ -385,7 +368,7 @@ class gMetropolis {
       gMetropolis::SpecialComponent();
     }
 
-    $componentPath = gShitRegConfig::GetKey('constant.components' . kDot . $aComponent);
+    $componentPath = gMetropolis::GetConfig('constant.components' . kDot . $aComponent);
 
     if (!$componentPath) {
       gMetropolis::NotFound('Unknown component.');
@@ -395,7 +378,7 @@ class gMetropolis {
       gMetropolis::NotFound('Failed to load the' . kSpace . $aComponent . kSpace .'component.');
     }
 
-    gShitRegConfig::SetKey('app.componentPath', gAppUtils::BuildPath(kRootPath, 'components', $aComponent));
+    gMetropolis::SetConfig('app.componentPath', gAppUtils::BuildPath(kRootPath, 'components', $aComponent));
     require_once($componentPath);
   }
 
@@ -430,7 +413,7 @@ class gMetropolis {
       $aMessage = 'HTTP/1.1 404 Not Found';
     }
 
-    if (gShitRegConfig::Debug()) {
+    if (gMetropolis::Debug()) {
       gErrorUtils::report(['code' => E_ALL, 'message' => $aMessage,
                            'file' => null, 'line' => null,
                            'trace' => debug_backtrace(2)]);
@@ -449,20 +432,20 @@ class gMetropolis {
   * Special Component!
   ***********************************************************************************************************************/
   public static function SpecialComponent() {
-    $spCurrentPath = gShitRegConfig::GetKey('app.path');
-    $spPathCount = gShitRegConfig::GetKey('app.depth');
+    $spCurrentPath = gMetropolis::GetConfig('app.path');
+    $spPathCount = gMetropolis::GetConfig('app.depth');
 
     if ($spCurrentPath[0] != kSpecialComponent) {
       gConUtils::Redirect(kSlash . kSpecialComponent . kSlash);
     }
 
-    gShitRegConfig::SetKey('app.component', kSpecialComponent);
+    gMetropolis::SetConfig('app.component', kSpecialComponent);
 
-    if (gShitRegConfig::GetKey('constant.disableSpecialComponent')) {
+    if (gMetropolis::GetConfig('constant.disableSpecialComponent')) {
       gMetropolis::NotFound('The special component has been disabled.');
     }
 
-    gShitRegConfig::SetKey('console.content.sectionName', kSpecialComponentName);
+    gMetropolis::SetConfig('console.content.sectionName', kSpecialComponentName);
 
     // The Special Component never has more than one level below it
     // We still have to determine the root of the component though...
@@ -481,12 +464,11 @@ class gMetropolis {
     $spCommandBar = array(
       '/special/'                 => kSpecialComponentName,
       '/special/test/'            => 'Test Cases',
-      '/special/vc/'              => 'Version Compare',
       '/special/guid/'            => 'GUID',
       '/special/hex/'             => 'Hex String',
     );
 
-    gShitRegConfig::SetKey('console.content.commandbar', gShitRegConfig::GetKey('constant.components.site') ?
+    gMetropolis::SetConfig('console.content.commandbar', gMetropolis::GetConfig('constant.components.site') ?
                                                array_merge(kDefaultMenu, $spCommandBar) :
                                                $spCommandBar);
 
@@ -499,10 +481,10 @@ class gMetropolis {
         gConUtils::Content($spContent, ['title' => 'Overview']);
         break;
       case 'test':
-        if (!gShitRegConfig::Debug()) {
+        if (!gMetropolis::Debug()) {
           gMetropolis::NotFound('This special function is not available when not in debug mode.');
         }
-        $spCase = gShitRegConfig::GetKey('superglobal.get.case');
+        $spCase = gMetropolis::GetConfig('superglobal.get.case');
         $spTestsPath = gAppUtils::BuildPath(kRootPath, 'base', 'tests');
         $spGlobTests = glob(gAppUtils::BuildPath($spTestsPath, kAsterisk . gAppUtils::FILE_EXT['php']));
         $spTests = kEmptyArray;
@@ -516,7 +498,7 @@ class gMetropolis {
             gMetropolis::Error('Unknown test case.');
           }
 
-          gShitRegConfig::SetKey('special.testCase', $spCase);
+          gMetropolis::SetConfig('special.testCase', $spCase);
           require_once(gAppUtils::BuildPath($spTestsPath, $spCase . gAppUtils::FILE_EXT['php']));
           headers_sent() ? exit() : gMetropolis::Error('The operation completed successfully.');
         }
@@ -533,29 +515,16 @@ class gMetropolis {
 
         gConUtils::Content($spContent, ['title' => 'Test Cases']);
         break;
-      case 'vc':
-        $spCurrVer = gShitRegConfig::GetKey('superglobal.post.currVer');
-        $spCompVer = gShitRegConfig::GetKey('superglobal.post.compVer');
-
-        if ($spCurrVer && $spCompVer) {
-          gConUtils::Content(gVersionCompare($spCurrVer, $spCompVer));
-        }
-
-        $spForm = '<form action="/special/vc/" method="post">Current Version:<br/><input type="text" name="currVer"><br/><br/>' .
-                  'Compare to Version:<br/><input type="text" name="compVer"><br/><br/><input type="submit"></form>';
-
-        gConUtils::Content('<h2>nsIVersionComparator</h2>' . $spForm, ['title' => 'Runtime Status']);
-        break;
       case 'guid':
-        gConUtils::Content(gAppUtils::GlobalIdentifer(gShitRegConfig::GetKey('superglobal.get.vendor'), true),
+        gConUtils::Content(gAppUtils::GlobalIdentifer(gMetropolis::GetConfig('superglobal.get.vendor'), true),
                  ['title' => 'Globally Unique Identifier (In XPIDL Notation)', 'textbox' => true]);
         break;
       case 'hex':
-        gConUtils::Content(gAppUtils::HexString(gShitRegConfig::GetKey('superglobal.get.length', 40)),
+        gConUtils::Content(gAppUtils::HexString(gMetropolis::GetConfig('superglobal.get.length', 40)),
                  ['title' => 'Pseudo-Random Hex String', 'textbox' => true]);
         break;
       case 'system':
-        if (!gShitRegConfig::Debug()) {
+        if (!gMetropolis::Debug()) {
           gMetropolis::NotFound('This special function is not available when not in debug mode.');
         }
         gMetropolis::Header('html', true);
@@ -684,7 +653,7 @@ class gMetropolis {
   * Get the registry property and return it
   ********************************************************************************************************************/
   public static function Component(?string $aCompareComponent = null) {
-    $rv = (gMetropolis::$sInited) ? gMetropolis::GetKey('app.component') : gMetropolis::SuperGlobal('get', 'component', 'site');
+    $rv = (gMetropolis::$sRuntimeConfiguration) ? gMetropolis::GetConfig('app.component') : gMetropolis::SuperGlobal('get', 'component', 'site');
 
     if ($aCompareComponent) {
       $rv = ($rv === $aCompareComponent);
@@ -697,14 +666,14 @@ class gMetropolis {
   * Get the registry property and return it
   ********************************************************************************************************************/
   public static function Debug() {
-    return (gMetropolis::$sInited) ? gMetropolis::GetKey('app.debug') : kDebugMode;
+    return (gMetropolis::$sRuntimeConfiguration) ? gMetropolis::GetConfig('app.debug') : kDebugMode;
   }
 
   /********************************************************************************************************************
   * Get the registry property and return it
   ********************************************************************************************************************/
   public static function GetStore() {
-    return gMetropolis::$sStore;
+    return gMetropolis::$sRuntimeConfiguration->get();
   }
 }
 
@@ -1162,7 +1131,7 @@ class gErrorUtils {
   * Output details about a failure condition
   ******************************************************************************************************************/
   public static function report(array $aMetadata) {
-    if (gShitRegConfig::Debug() && gMetropolis::SuperGlobal('get', 'runtime')) {
+    if (gMetropolis::Debug() && gMetropolis::SuperGlobal('get', 'runtime')) {
       gConUtils::Output((self::kPhpErrorCodes[$aMetadata['code']] ?? self::kPhpErrorCodes[E_ALL]) . kSpaceDashSpace . $aMetadata['message']);
     }
 
@@ -1195,14 +1164,14 @@ class gErrorUtils {
 
       $commandBar = ['onclick="history.back()"' => 'Go Back'];
 
-      if (gShitRegConfig::Component(kSpecialComponent) || !gShitRegConfig::GetKey('constant.components.site')) {
-        gShitRegConfig::SetKey('console.content.commandbar', array_merge($commandBar, ['/special/' => kSpecialComponentName]));
+      if (gMetropolis::Component(kSpecialComponent) || !gMetropolis::GetConfig('constant.components.site')) {
+        gMetropolis::SetConfig('console.content.commandbar', array_merge($commandBar, ['/special/' => kSpecialComponentName]));
       }
       else {
-        gShitRegConfig::SetKey('console.content.commandbar', array_merge($commandBar, kDefaultMenu));
+        gMetropolis::SetConfig('console.content.commandbar', array_merge($commandBar, kDefaultMenu));
       }
 
-      gShitRegConfig::SetKey('console.content.sectionName', kEmptyString);
+      gMetropolis::SetConfig('console.content.sectionName', kEmptyString);
       gConUtils::Content($content, ['title' => $title, 'statustext' => 'Please contact a system administrator.']);
     }
 
@@ -1308,18 +1277,18 @@ class gConUtils {
       }
     }
 
-    return gShitRegConfig::SetKey('console.output.httpHeaders[]', $aHeader);
+    return gMetropolis::SetConfig('console.output.httpHeaders[]', $aHeader);
   }
 
   /********************************************************************************************************************
   * Gets or sets the "default" content type so we don't have to output the header ourselves in most cases.
   ********************************************************************************************************************/
   public static function SendHeaders() {
-    $responseCode = gShitRegConfig::GetKey('console.output.responseCode', 200);
-    gShitRegConfig::SetKey('console.output.httpHeaders[]', 'Content-type'. kColon . kSpace . gShitRegConfig::GetKey('console.output.contentType'));
-    gShitRegConfig::SetKey('console.output.httpHeaders[]', 'HTTP/1.1' . kSpace . $responseCode . kSpace . self::HTTP_STATUS_CODE[$responseCode]);
+    $responseCode = gMetropolis::GetConfig('console.output.responseCode', 200);
+    gMetropolis::SetConfig('console.output.httpHeaders[]', 'Content-type'. kColon . kSpace . gMetropolis::GetConfig('console.output.contentType'));
+    gMetropolis::SetConfig('console.output.httpHeaders[]', 'HTTP/1.1' . kSpace . $responseCode . kSpace . self::HTTP_STATUS_CODE[$responseCode]);
 
-    $headers = gShitRegConfig::GetKey('console.output.httpHeaders', kEmptyArray);
+    $headers = gMetropolis::GetConfig('console.output.httpHeaders', kEmptyArray);
 
     foreach ($headers as $_value) {
       header(trim($_value), true);
@@ -1331,11 +1300,11 @@ class gConUtils {
   ********************************************************************************************************************/
   public static function HttpStatusCode(?string $aStatusCode = null) {
     if (!$aStatusCode) {
-      gShitRegConfig::GetKey('console.output.responseCode', 200);
+      gMetropolis::GetConfig('console.output.responseCode', 200);
     }
 
     if (gAppUtils::Contains(self::HTTP_STATUS_CODE, $aStatusCode, 1)) {
-      gShitRegConfig::SetKey('console.output.responseCode', $aStatusCode);
+      gMetropolis::SetConfig('console.output.responseCode', $aStatusCode);
     }
   }
 
@@ -1344,11 +1313,11 @@ class gConUtils {
   ********************************************************************************************************************/
   public static function ContentType(?string $aContentType = null) {
      if ($aContentType === null) {
-      return gShitRegConfig::GetKey('console.output.contentType');
+      return gMetropolis::GetConfig('console.output.contentType');
     }
 
     if (gAppUtils::Contains(self::MIME_TYPES, $aContentType, 1)) {
-      return gShitRegConfig::SetKey('console.output.contentType', self::MIME_TYPES[$aContentType]);
+      return gMetropolis::SetConfig('console.output.contentType', self::MIME_TYPES[$aContentType]);
     }
   }
 
@@ -1384,8 +1353,8 @@ class gConUtils {
   public static function Output(mixed $aContent, ?string $aHeader = 'text') {
     $content = null;
 
-    if (gShitRegConfig::Debug() && gMetropolis::SuperGlobal('get', 'runtime')) {
-      $content = array_merge(gShitRegConfig::GetStore(), ['superglobal' => $GLOBALS]);
+    if (gMetropolis::Debug() && gMetropolis::SuperGlobal('get', 'runtime')) {
+      $content = gMetropolis::GetStore();
       $content['console']['output']['responseBody'] = $aContent;
       $content['console']['output']['responseTime'] = microtime(true) - gMetropolis::SuperGlobal('server', 'REQUEST_TIME_FLOAT', 0);
       $content = json_encode($content, gAppUtils::JSON_ENCODE_FLAGS['display']);
@@ -1477,24 +1446,24 @@ class gConUtils {
       $content = '<form><textarea class="special-textbox" name="content" rows="30" readonly>' . $content . '</textarea></form>';
     }
 
-    $siteName = gShitRegConfig::GetKey('console.content.siteName', kAppName);
-    $sectionName = gShitRegConfig::GetKey('console.content.sectionName', kEmptyString);
+    $siteName = gMetropolis::GetConfig('console.content.siteName', kAppName);
+    $sectionName = gMetropolis::GetConfig('console.content.sectionName', kEmptyString);
 
     if ($sectionName) {
       $siteName = $sectionName . kSpaceDashSpace . $siteName;
     }
 
-    $isTestCase = (!$metadata('title') && gShitRegConfig::GetKey('special.testCase') && gShitRegConfig::Component(kSpecialComponent));
+    $isTestCase = (!$metadata('title') && gMetropolis::GetConfig('special.testCase') && gMetropolis::Component(kSpecialComponent));
 
     $substs = array(
       '{$SITE_STYLESHEET}'  => $stylesheet ?? kEmptyString,
       '{$PAGE_CONTENT}'     => $content,
       '{$SITE_DOMAIN}'      => gMetropolis::SuperGlobal('server', 'SERVER_NAME'),
       '{$SITE_NAME}'        => $siteName,
-      '{$SITE_MENU}'        => $menuize(gShitRegConfig::GetKey('console.content.commandbar')),
+      '{$SITE_MENU}'        => $menuize(gMetropolis::GetConfig('console.content.commandbar')),
       '{$SITE_SECTION}'     => $sectionName ?? kEmptyString,
-      '{$PAGE_TITLE}'       => $isTestCase ? '[Test]' . kSpace . gShitRegConfig::GetKey('special.testCase') : ($metadata('title') ?? 'Output'),
-      '{$PAGE_STATUS}'      => $metadata('statustext') ?? gShitRegConfig::GetKey('console.content.statustext'),
+      '{$PAGE_TITLE}'       => $isTestCase ? '[Test]' . kSpace . gMetropolis::GetConfig('special.testCase') : ($metadata('title') ?? 'Output'),
+      '{$PAGE_STATUS}'      => $metadata('statustext') ?? gMetropolis::GetConfig('console.content.statustext'),
       '{$SKIN_PATH}'        => gAppUtils::BuildPath(kSlash, 'base', 'skin'),
       '{$SOFTWARE_VENDOR}'  => kAppVendor,
       '{$SOFTWARE_NAME}'    => kAppName,
@@ -1580,199 +1549,6 @@ class gConUtils {
     }
 
     return $xml;
-  }
-}
-
-// ====================================================================================================================
-
-// == | Static Registry Class | =======================================================================================
-
-class gShitRegConfig {
-  private static $sInited = false;
-  private static $sStore  = kEmptyArray;
-  public  static $sStore2 = kEmptyArray;
-  private static $sRemap  = ['constant', 'superglobal'];
-
-  /********************************************************************************************************************
-  * Init the static class
-  ********************************************************************************************************************/
-  public static function init() {
-    if (self::$sInited) {
-      return;
-    }
-
-    $domain = function($aHost, $aReturnSub = false) {
-      $host = gAppUtils::ExplodeStr(kDot, $aHost);
-      return implode(kDot, $aReturnSub ? array_slice($host, 0, -2) : array_slice($host, -2, 2));
-    };
-
-    $path = gAppUtils::ExplodePath(gMetropolis::SuperGlobal('get', 'path', kSlash));
-
-    self::$sStore = array(
-      'app' => array(
-        'component'   => gMetropolis::SuperGlobal('get', 'component', 'site'),
-        'path'        => $path,
-        'depth'       => count($path ?? kEmptyArray),
-        'debug'       => kDebugMode,
-        'offline'     => file_exists(gAppUtils::BuildPath(kRootPath, '.offline')),
-      ),
-      'network' => array(
-        'scheme'      => gMetropolis::SuperGlobal('server', 'SCHEME') ?? (gMetropolis::SuperGlobal('server', 'HTTPS') ? 'https' : 'http'),
-        'baseDomain'  => $domain(gMetropolis::SuperGlobal('server', 'SERVER_NAME', 'localhost')),
-        'subDomain'   => $domain(gMetropolis::SuperGlobal('server', 'SERVER_NAME', 'localhost'), true),
-        'remoteAddr'  => gMetropolis::SuperGlobal('server', 'HTTP_X_FORWARDED_FOR', gMetropolis::SuperGlobal('server', 'REMOTE_ADDR', '127.0.0.1')),
-        'userAgent'   => gMetropolis::SuperGlobal('server', 'HTTP_USER_AGENT', 'php' . kDash . PHP_SAPI . kSlash . PHP_VERSION),
-      ),
-      'console' => array(
-        'output' => array(
-          'contentType' => 'text/plain',
-          'responseCode'  => 200,
-          'httpHeaders' => kEmptyArray,
-        ),
-        'content' => array(
-          'skin'          => kDefaultSkinName,
-          'skinPath'      => kDefaultSkinPath,
-          'template'      => null,
-          'stylesheet'    => null,
-          'mainmenu'      => kDefaultMenu,
-          'commandbar'    => kDefaultMenu,
-          'statustext'    => 'Done',
-        ),
-      ),
-    );
-
-    if (defined('kDebugDomain') && !SAPI_IS_CLI) {
-      self::$sStore['app']['debug'] =
-        (gMetropolis::SuperGlobal('server', 'SERVER_NAME', 'localhost') != constant('kDebugDomain') ?? kEmptyString) ?
-        file_exists(gAppUtils::BuildPath(kRootPath, '.debugMode')) :
-        !kDebugMode;
-    }
-
-    self::$sStore2 = new \Adbar\Dot;
-    self::$sStore2->setReference(self::$sStore);
-    self::$sInited = true;
-  }
-
-  /********************************************************************************************************************
-  * Get the registry property and return it
-  ********************************************************************************************************************/
-  public static function Component(?string $aCompareComponent = null) {
-    $rv = (self::$sInited) ? self::GetKey('app.component') : gMetropolis::SuperGlobal('get', 'component', 'site');
-
-    if ($aCompareComponent) {
-      $rv = ($rv === $aCompareComponent);
-    }
-
-    return $rv;
-  }
-
-  /********************************************************************************************************************
-  * Get the registry property and return it
-  ********************************************************************************************************************/
-  public static function Debug() {
-    return (self::$sInited) ? self::GetKey('app.debug') : kDebugMode;
-  }
-
-  /********************************************************************************************************************
-  * Get the registry property and return it
-  ********************************************************************************************************************/
-  public static function GetStore() {
-    return self::$sStore;
-  }
-
-  /********************************************************************************************************************
-  * Get the value of a dotted key from the registry property except for virtual regnodes
-  ********************************************************************************************************************/
-  public static function GetKey(string $aKey, $aDefault = null) {
-    if ($aKey == kEmptyString) {
-      return null;
-    }
-
-    $keys = gAppUtils::ExplodeStr(kDot, $aKey);
-
-    if (in_array($keys[0] ?? kEmptyString, self::$sRemap)) {
-      switch ($keys[0] ?? kEmptyString) {
-        case 'constant':
-          if (count($keys) < 2) {
-            return null;
-          }
-
-          $ucConst = strtoupper($keys[1]);
-          $prefixConst = 'k' . ucfirst($keys[1]);
-
-          switch (true) {
-            case defined($prefixConst):
-              $rv = constant($prefixConst);
-              break;
-            case defined($ucConst):
-              $rv = constant($ucConst);
-              break;
-            case defined($keys[1]):
-              $rv = constant($keys[1]);
-              break;
-            default:
-              return null;
-          }
-
-          if (!\Illuminate\Support\Arr::accessible($rv)) {
-            return $rv ?? $aDefault;
-          }
-
-          unset($keys[0], $keys[1]);
-          $rv = \Illuminate\Support\Arr::get($rv, gMetropolis::EnsureValue(implode(kDot, $keys)), $aDefault);
-          break;
-        case 'superglobal':
-          if (count($keys) < 3) {
-            return null;
-          }
-
-          $rv = gMetropolis::SuperGlobal($keys[1], $keys[2]);
-
-          if (!Illuminate\Support\Arr::accessible($rv)) {
-            return $rv ?? $aDefault;
-          }
-
-          unset($keys[0], $keys[1]);
-          $rv = \Illuminate\Support\Arr::get($rv, gMetropolis::EnsureValue(implode(kDot, $keys)), $aDefault);
-          break;
-        default:
-          if (count($keys) < 2 || str_starts_with($keys[1], kUnderbar)) {
-            return null;
-          }
-
-          unset($keys[0]);
-          $rv = \Illuminate\Support\Arr::get($GLOBALS, gMetropolis::EnsureValue(implode(kDot, $keys)), $aDefault);
-      }
-    }
-    else {
-      $rv = \Illuminate\Support\Arr::get(self::$sStore, $aKey, $aDefault);
-    }
-      
-    return $rv;
-  }
-
-  /********************************************************************************************************************
-  * Set the value of a dotted key from the registry property
-  ********************************************************************************************************************/
-  public static function SetKey(string $aKey, string|int|bool|array|null $aValue) {
-    if (in_array(gAppUtils::ExplodeStr(kDot, $aKey)[0] ?? kEmptyString, self::$sRemap)) {
-      gMetropolis::Error('Setting values on virtual nodes is not supported.');
-    }
-
-    if (gAppUtils::Contains($aKey, '[]', -1)) {
-      $aKey = substr($aKey, 0, -2);
-      $value = gShitRegConfig::GetKey($aKey, kEmptyArray);
-
-      if (!is_array($value)) {
-        $value = [$value];
-      }
-
-      $value[] = $aValue;
-      $aValue = $value;
-    }
-
-    $rv = \Illuminate\Support\Arr::set(self::$sStore, $aKey, $aValue);
-    return $rv;
   }
 }
 
@@ -2023,20 +1799,17 @@ class Dot implements ArrayAccess, Countable, IteratorAggregate, JsonSerializable
    * @param  non-empty-string  $delimiter
    * @return void
    */
-  public function __construct($items = [], $parse = false, $delimiter = ".")
-  {
+  public function __construct($items = [], $parse = false, $delimiter = ".") {
     $items = $this->getArrayItems($items);
-
     $this->delimiter = $delimiter ?: ".";
-
+    
     if ($parse) {
       $this->set($items);
-    } else {
+    }
+    else {
       $this->items = $items;
     }
   }
-
-  // ====
 
   /**
    * Set a given key / value pair or pairs
@@ -2046,32 +1819,25 @@ class Dot implements ArrayAccess, Countable, IteratorAggregate, JsonSerializable
    * @param  mixed  $value
    * @return $this
    */
-  public function add($keys, $value = null)
-  {
+  public function add($keys, $value = null) {
     if (is_array($keys)) {
       foreach ($keys as $key => $value) {
         $this->add($key, $value);
       }
-    } elseif ($this->get($keys) === null) {
+    }
+    elseif ($this->get($keys) === null) {
       $this->set($keys, $value);
     }
 
     return $this;
   }
 
-  // ====
-
   /**
    * Return all the stored items
    *
    * @return array<TKey, TValue>
    */
-  public function all()
-  {
-    return $this->items;
-  }
-
-  // ====
+  public function all() { return $this->items; }
 
   /**
    * Delete the contents of a given key or keys
@@ -2083,20 +1849,13 @@ class Dot implements ArrayAccess, Countable, IteratorAggregate, JsonSerializable
   {
     if ($keys === null) {
       $this->items = [];
-
       return $this;
     }
 
     $keys = (array) $keys;
-
-    foreach ($keys as $key) {
-      $this->set($key, []);
-    }
-
+    foreach ($keys as $key) { $this->set($key, []); }
     return $this;
   }
-
-  // ====
 
   /**
    * Delete the given key or keys
@@ -2104,14 +1863,12 @@ class Dot implements ArrayAccess, Countable, IteratorAggregate, JsonSerializable
    * @param  array<TKey>|array<TKey, TValue>|int|string  $keys
    * @return $this
    */
-  public function delete($keys)
-  {
+  public function delete($keys) {
     $keys = (array) $keys;
 
     foreach ($keys as $key) {
       if ($this->exists($this->items, $key)) {
         unset($this->items[$key]);
-
         continue;
       }
 
@@ -2133,8 +1890,6 @@ class Dot implements ArrayAccess, Countable, IteratorAggregate, JsonSerializable
     return $this;
   }
 
-  // ====
-
   /**
    * Checks if the given key exists in the provided array.
    *
@@ -2142,12 +1897,7 @@ class Dot implements ArrayAccess, Countable, IteratorAggregate, JsonSerializable
    * @param  int|string  $key  The key to look for
    * @return bool
    */
-  protected function exists($array, $key)
-  {
-    return array_key_exists($key, $array);
-  }
-
-  // ====
+  protected function exists($array, $key) { return array_key_exists($key, $array); }
 
   /**
    * Flatten an array with the given character as a key delimiter
@@ -2157,8 +1907,7 @@ class Dot implements ArrayAccess, Countable, IteratorAggregate, JsonSerializable
    * @param  string  $prepend
    * @return array<TKey, TValue>
    */
-  public function flatten($delimiter = '.', $items = null, $prepend = '')
-  {
+  public function flatten($delimiter = '.', $items = null, $prepend = '') {
     $flatten = [];
 
     if ($items === null) {
@@ -2168,15 +1917,14 @@ class Dot implements ArrayAccess, Countable, IteratorAggregate, JsonSerializable
     foreach ($items as $key => $value) {
       if (is_array($value) && !empty($value)) {
         $flatten[] = $this->flatten($delimiter, $value, $prepend . $key . $delimiter);
-      } else {
+      }
+      else {
         $flatten[] = [$prepend . $key => $value];
       }
     }
 
     return array_merge(...$flatten);
   }
-
-  // ====
 
   /**
    * Return the value of a given key
@@ -2185,11 +1933,8 @@ class Dot implements ArrayAccess, Countable, IteratorAggregate, JsonSerializable
    * @param  mixed  $default
    * @return mixed
    */
-  public function get($key = null, $default = null)
-  {
-    if ($key === null) {
-      return $this->items;
-    }
+  public function get($key = null, $default = null) {
+    if ($key === null) { return $this->items; }
 
     if ($this->exists($this->items, $key)) {
       return $this->items[$key];
@@ -2212,19 +1957,14 @@ class Dot implements ArrayAccess, Countable, IteratorAggregate, JsonSerializable
     return $items;
   }
 
-  // ====
-
   /**
    * Return the given items as an array
    *
    * @param  array<TKey, TValue>|self<TKey, TValue>|object|string  $items
    * @return array<TKey, TValue>
    */
-  protected function getArrayItems($items)
-  {
-    if (is_array($items)) {
-      return $items;
-    }
+  protected function getArrayItems($items) {
+    if (is_array($items)) { return $items; }
 
     if ($items instanceof self) {
       return $items->all();
@@ -2233,16 +1973,13 @@ class Dot implements ArrayAccess, Countable, IteratorAggregate, JsonSerializable
     return (array) $items;
   }
 
-  // ====
-
   /**
    * Check if a given key or keys exists
    *
    * @param  array<TKey>|int|string  $keys
    * @return bool
    */
-  public function has($keys)
-  {
+  public function has($keys) {
     $keys = (array) $keys;
 
     if (!$this->items || $keys === []) {
@@ -2268,16 +2005,13 @@ class Dot implements ArrayAccess, Countable, IteratorAggregate, JsonSerializable
     return true;
   }
 
-  // ====
-
   /**
    * Check if a given key or keys are empty
    *
    * @param  array<TKey>|int|string|null  $keys
    * @return bool
    */
-  public function isEmpty($keys = null)
-  {
+  public function isEmpty($keys = null) {
     if ($keys === null) {
       return empty($this->items);
     }
@@ -2303,16 +2037,17 @@ class Dot implements ArrayAccess, Countable, IteratorAggregate, JsonSerializable
    * @param  array<TKey, TValue>|self<TKey, TValue>  $value
    * @return $this
    */
-  public function merge($key, $value = [])
-  {
+  public function merge($key, $value = []) {
     if (is_array($key)) {
       $this->items = array_merge($this->items, $key);
-    } elseif (is_string($key)) {
+    }
+    elseif (is_string($key)) {
       $items = (array) $this->get($key);
       $value = array_merge($items, $this->getArrayItems($value));
 
       $this->set($key, $value);
-    } elseif ($key instanceof self) {
+    }
+    elseif ($key instanceof self) {
       $this->items = array_merge($this->items, $key->all());
     }
 
@@ -2331,16 +2066,17 @@ class Dot implements ArrayAccess, Countable, IteratorAggregate, JsonSerializable
    * @param  array<TKey, TValue>|self<TKey, TValue>  $value
    * @return $this
    */
-  public function mergeRecursive($key, $value = [])
-  {
+  public function mergeRecursive($key, $value = []) {
     if (is_array($key)) {
       $this->items = array_merge_recursive($this->items, $key);
-    } elseif (is_string($key)) {
+    }
+    elseif (is_string($key)) {
       $items = (array) $this->get($key);
       $value = array_merge_recursive($items, $this->getArrayItems($value));
 
       $this->set($key, $value);
-    } elseif ($key instanceof self) {
+    }
+    elseif ($key instanceof self) {
       $this->items = array_merge_recursive($this->items, $key->all());
     }
 
@@ -2360,16 +2096,17 @@ class Dot implements ArrayAccess, Countable, IteratorAggregate, JsonSerializable
    * @param  array<TKey, TValue>|self<TKey, TValue>  $value
    * @return $this
    */
-  public function mergeRecursiveDistinct($key, $value = [])
-  {
+  public function mergeRecursiveDistinct($key, $value = []) {
     if (is_array($key)) {
       $this->items = $this->arrayMergeRecursiveDistinct($this->items, $key);
-    } elseif (is_string($key)) {
+    }
+    elseif (is_string($key)) {
       $items = (array) $this->get($key);
       $value = $this->arrayMergeRecursiveDistinct($items, $this->getArrayItems($value));
 
       $this->set($key, $value);
-    } elseif ($key instanceof self) {
+    }
+    elseif ($key instanceof self) {
       $this->items = $this->arrayMergeRecursiveDistinct($this->items, $key->all());
     }
 
@@ -2387,14 +2124,14 @@ class Dot implements ArrayAccess, Countable, IteratorAggregate, JsonSerializable
    * @param  array<TKey, TValue>|array<TKey, array<TKey, TValue>>  $array2 Array to recursively merge
    * @return array<TKey, TValue>|array<TKey, array<TKey, TValue>>
    */
-  protected function arrayMergeRecursiveDistinct(array $array1, array $array2)
-  {
+  protected function arrayMergeRecursiveDistinct(array $array1, array $array2) {
     $merged = &$array1;
 
     foreach ($array2 as $key => $value) {
       if (is_array($value) && isset($merged[$key]) && is_array($merged[$key])) {
         $merged[$key] = $this->arrayMergeRecursiveDistinct($merged[$key], $value);
-      } else {
+      }
+      else {
         $merged[$key] = $value;
       }
     }
@@ -2412,8 +2149,7 @@ class Dot implements ArrayAccess, Countable, IteratorAggregate, JsonSerializable
    * @param  mixed  $default
    * @return mixed
    */
-  public function pull($key = null, $default = null)
-  {
+  public function pull($key = null, $default = null) {
     if ($key === null) {
       $value = $this->all();
       $this->clear();
@@ -2437,8 +2173,7 @@ class Dot implements ArrayAccess, Countable, IteratorAggregate, JsonSerializable
    * @param  mixed  $value
    * @return $this
    */
-  public function push($key, $value = null)
-  {
+  public function push($key, $value = null) {
     if ($value === null) {
       $this->items[] = $key;
 
@@ -2465,16 +2200,17 @@ class Dot implements ArrayAccess, Countable, IteratorAggregate, JsonSerializable
    * @param  array<TKey, TValue>|self<TKey, TValue>  $value
    * @return $this
    */
-  public function replace($key, $value = [])
-  {
+  public function replace($key, $value = []) {
     if (is_array($key)) {
       $this->items = array_replace($this->items, $key);
-    } elseif (is_string($key)) {
+    }
+    elseif (is_string($key)) {
       $items = (array) $this->get($key);
       $value = array_replace($items, $this->getArrayItems($value));
 
       $this->set($key, $value);
-    } elseif ($key instanceof self) {
+    }
+    elseif ($key instanceof self) {
       $this->items = array_replace($this->items, $key->all());
     }
 
@@ -2490,8 +2226,7 @@ class Dot implements ArrayAccess, Countable, IteratorAggregate, JsonSerializable
    * @param  mixed  $value
    * @return $this
    */
-  public function set($keys, $value = null)
-  {
+  public function set($keys, $value = null) {
     if (is_array($keys)) {
       foreach ($keys as $key => $value) {
         $this->set($key, $value);
@@ -2525,8 +2260,7 @@ class Dot implements ArrayAccess, Countable, IteratorAggregate, JsonSerializable
    * @param  mixed  $items
    * @return $this
    */
-  public function setArray($items)
-  {
+  public function setArray($items) {
     $this->items = $this->getArrayItems($items);
 
     return $this;
@@ -2540,8 +2274,7 @@ class Dot implements ArrayAccess, Countable, IteratorAggregate, JsonSerializable
    * @param  array<TKey, TValue>  $items
    * @return $this
    */
-  public function setReference(array &$items)
-  {
+  public function setReference(array &$items) {
     $this->items = &$items;
 
     return $this;
@@ -2556,8 +2289,7 @@ class Dot implements ArrayAccess, Countable, IteratorAggregate, JsonSerializable
    * @param  int  $options
    * @return string|false
    */
-  public function toJson($key = null, $options = 0)
-  {
+  public function toJson($key = null, $options = 0) {
     if (is_string($key)) {
       return json_encode($this->get($key), $options);
     }
@@ -2576,10 +2308,7 @@ class Dot implements ArrayAccess, Countable, IteratorAggregate, JsonSerializable
    * @param  array<TKey, TValue>  $items
    * @return object
    */
-  public static function __set_state(array $items): object
-  {
-    return (object) $items;
-  }
+  public static function __set_state(array $items): object { return (object) $items; }
 
   // ====
 
@@ -2595,10 +2324,7 @@ class Dot implements ArrayAccess, Countable, IteratorAggregate, JsonSerializable
    * @param  int|string  $key
    * @return bool
    */
-  public function offsetExists($key): bool
-  {
-    return $this->has($key);
-  }
+  public function offsetExists($key): bool { return $this->has($key); }
 
   // ====
 
@@ -2609,10 +2335,7 @@ class Dot implements ArrayAccess, Countable, IteratorAggregate, JsonSerializable
    * @return mixed
    */
   #[\ReturnTypeWillChange]
-  public function offsetGet($key)
-  {
-    return $this->get($key);
-  }
+  public function offsetGet($key) { return $this->get($key); }
 
   // ====
 
@@ -2622,8 +2345,7 @@ class Dot implements ArrayAccess, Countable, IteratorAggregate, JsonSerializable
    * @param int|string|null  $key
    * @param mixed  $value
    */
-  public function offsetSet($key, $value): void
-  {
+  public function offsetSet($key, $value): void {
     if ($key === null) {
       $this->items[] = $value;
 
@@ -2641,10 +2363,7 @@ class Dot implements ArrayAccess, Countable, IteratorAggregate, JsonSerializable
    * @param  int|string  $key
    * @return void
    */
-  public function offsetUnset($key): void
-  {
-    $this->delete($key);
-  }
+  public function offsetUnset($key): void { $this->delete($key); }
 
   // ====
 
@@ -2660,10 +2379,7 @@ class Dot implements ArrayAccess, Countable, IteratorAggregate, JsonSerializable
    * @param  int|string|null  $key
    * @return int
    */
-  public function count($key = null): int
-  {
-    return count($this->get($key));
-  }
+  public function count($key = null): int { return count($this->get($key)); }
 
   // ====
 
@@ -2678,10 +2394,7 @@ class Dot implements ArrayAccess, Countable, IteratorAggregate, JsonSerializable
    *
    * @return \ArrayIterator<TKey, TValue>
    */
-  public function getIterator(): Traversable
-  {
-    return new ArrayIterator($this->items);
-  }
+  public function getIterator(): Traversable { return new ArrayIterator($this->items); }
 
   // ====
 
@@ -2696,241 +2409,15 @@ class Dot implements ArrayAccess, Countable, IteratorAggregate, JsonSerializable
    *
    * @return array<TKey, TValue>
    */
-  public function jsonSerialize(): array
-  {
-    return $this->items;
-  }
+  public function jsonSerialize(): array { return $this->items; }
 }
 
-} // ==================================================================================================================
-// ====================================================================================================================
-
-namespace Illuminate\Support { // == | ArrayUtils | ===================================================================
-
-/* The Arr class and its methods are under the following license:
-
-  The MIT License (MIT)
-
-  Copyright (c) Taylor Otwell
-
-  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
-  documentation files (the "Software"), to deal in the Software without restriction, including without limitation the
-  rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit
-  persons to whom the Software is furnished to do so, subject to the following conditions:
-
-  The above copyright notice and this permission notice shall be included in all copies or substantial portions
-  of the Software.
-
-  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
-  WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
-  COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-  OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-*/
-class Arr {
-    /**
-     * Get an item from an array using "dot" notation.
-     *
-     * @param  \ArrayAccess|array  $array
-     * @param  string|int|null  $key
-     * @param  mixed  $default
-     * @return mixed
-     */
-    public static function get($array, $key, $default = null)
-    {
-        if (! static::accessible($array)) {
-            return static::value($default);
-        }
-
-        if (is_null($key)) {
-            return $array;
-        }
-
-        if (static::exists($array, $key)) {
-            return $array[$key];
-        }
-
-        if (! str_contains($key, '.')) {
-            return $array[$key] ?? static::value($default);
-        }
-
-        foreach (explode('.', $key) as $segment) {
-            if (static::accessible($array) && static::exists($array, $segment)) {
-                $array = $array[$segment];
-            } else {
-                return static::value($default);
-            }
-        }
-
-        return $array;
-    }
-
-    /**
-     * Determine whether the given value is array accessible.
-     *
-     * @param  mixed  $value
-     * @return bool
-     */
-    public static function accessible($value)
-    {
-        return is_array($value) || $value instanceof ArrayAccess;
-    }
-
-    /**
-     * Determine if the given key exists in the provided array.
-     *
-     * @param  \ArrayAccess|array  $array
-     * @param  string|int  $key
-     * @return bool
-     */
-    public static function exists($array, $key)
-    {
-        if ($array instanceof ArrayAccess) {
-            return $array->offsetExists($key);
-        }
-        return array_key_exists($key, $array);
-    }
-
-    /**
-     * Return the default value of the given value.
-     *
-     * @param  mixed  $value
-     * @return mixed
-     */
-    public static function value($value)
-    {
-        return $value instanceof Closure ? $value() : $value;
-    }
-
-    /**
-     * Set an array item to a given value using "dot" notation.
-     *
-     * If no key is given to the method, the entire array will be replaced.
-     *
-     * @param  array  $array
-     * @param  string|int|null  $key
-     * @param  mixed  $value
-     * @return array
-     */
-    public static function set(&$array, $key, $value)
-    {
-        if (is_null($key)) {
-            return $array = $value;
-        }
-
-        $keys = explode('.', $key);
-
-        foreach ($keys as $i => $key) {
-            if (count($keys) === 1) {
-                break;
-            }
-
-            unset($keys[$i]);
-
-            // If the key doesn't exist at this depth, we will just create an empty array
-            // to hold the next value, allowing us to create the arrays to hold final
-            // values at the correct depth. Then we'll keep digging into the array.
-            if (! isset($array[$key]) || ! is_array($array[$key])) {
-                $array[$key] = [];
-            }
-
-            $array = &$array[$key];
-        }
-
-        $array[array_shift($keys)] = $value;
-
-        return $array;
-      }
-
-    /**
-     * Remove one or many array items from a given array using "dot" notation.
-     *
-     * @param  array  $array
-     * @param  array|string|int|float  $keys
-     * @return void
-     */
-    public static function forget(&$array, $keys)
-    {
-        $original = &$array;
-
-        $keys = (array) $keys;
-
-        if (count($keys) === 0) {
-            return;
-        }
-
-        foreach ($keys as $key) {
-            // if the exact key exists in the top-level, remove it
-            if (static::exists($array, $key)) {
-                unset($array[$key]);
-
-                continue;
-            }
-
-            $parts = explode('.', $key);
-
-            // clean up before each pass
-            $array = &$original;
-
-            while (count($parts) > 1) {
-                $part = array_shift($parts);
-
-                if (isset($array[$part]) && static::accessible($array[$part])) {
-                    $array = &$array[$part];
-                } else {
-                    continue 2;
-                }
-            }
-
-            unset($array[array_shift($parts)]);
-        }
-    }
-
-    /**
-     * Flatten a multi-dimensional associative array with dots.
-     *
-     * @param  iterable  $array
-     * @param  string  $prepend
-     * @return array
-     */
-    public static function dot($array, $prepend = '')
-    {
-        $results = [];
-
-        foreach ($array as $key => $value) {
-            if (is_array($value) && ! empty($value)) {
-                $results = array_merge($results, static::dot($value, $prepend.$key.'.'));
-            } else {
-                $results[$prepend.$key] = $value;
-            }
-        }
-
-        return $results;
-    }
-
-    /**
-     * Convert a flatten "dot" notation array into an expanded array.
-     *
-     * @param  iterable  $array
-     * @return array
-     */
-    public static function undot($array)
-    {
-        $results = [];
-
-        foreach ($array as $key => $value) {
-            static::set($results, $key, $value);
-        }
-
-        return $results;
-    }
-    
-}
 } // ==================================================================================================================
 // ====================================================================================================================
 
 namespace { // ========================================================================================================
 
-// You have entered grid 9-2 of sub-junction 12.. Proceed.
+// An application has been detected - Unimatrix 424, Grid 116 - activate.
 gMetropolis::init();
 
 } // ==================================================================================================================
