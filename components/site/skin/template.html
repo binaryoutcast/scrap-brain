@@ -1,7 +1,7 @@
 <html>
   <head>
-    <title>BinOC v28</title>
-    <link rel="stylesheet" href="./webfonts/red-hat-font.css">
+    <title>{xtplPageTitle} - {xtplSiteName}</title>
+    <link rel="stylesheet" href="{xtplComnSkinPath}/webfonts/red-hat-font.css">
     <style>
       body {
         margin: 0px;
@@ -425,14 +425,14 @@
   <body>
     <div id="binoc-header">
       <div id="binoc-header-logo">
-        <a href="https://binaryoutcast.com/" title="The colors, Duke, the colors!"><img src="binoc-logo.png" /></a>
+        <a href="https://binaryoutcast.com/" title="The colors, Duke, the colors!"><img src="{xtplCompSkinPath}/binoc-logo.png" /></a>
       </div>
       <div id="binoc-header-menu" class="binoc-shadow-text">
         <ul>
-          <li><a href="https://binaryoutcast.com/">Home</a></li>
-          <li><a href="https://binaryoutcast.com/updates/">Updates</a></li>
-          <li><a href="https://projects.binaryoutcast.com/interlink/releases/latest/">Interlink Downloads</a></li>
-          <li><a href="https://interlink-addons.binaryoutcast.com/" style="padding-left: 0px !important; margin-left: -11px !important;" title="&amp; Knuckles">&amp; Add-ons</a></li>
+          <li><a href="/">Front Page (Home)</a></li>
+          <li><a href="/updates/">Updates</a></li>
+          <li><a href="https://projects.binaryoutcast.com/interlink/releases/latest/"  target="_blank">Interlink Downloads</a></li>
+          <li><a href="https://interlink-addons.binaryoutcast.com/"  target="_blank" style="padding-left: 0px !important; margin-left: -11px !important;" title="&amp; Knuckles">&amp; Add-ons</a></li>
           <li><a href="https://github.com/binaryoutcast/" target="_blank">Code @ Github</a></li>
           <!-- <li><a href="https://projects.binaryoutcast.com/">Projects</a></li> -->
           <!-- <li><a href="https://code.binaryoutcast.com/">Code</a></li> -->
@@ -441,18 +441,19 @@
           <!-- <li><a href="https://posts.binaryoutcast.com/">Posts</a></li> -->
           <!-- <li><a href="https://chat.binaryoutcast.com/">Chat</a></li> -->
           <!-- <li><a href="https://binocnetwork.com/">Network</a></li> -->
-          <li><a href="https://binaryoutcast.com/about/">About</a></li>
+          <li><a href="/about/">About</a></li>
         </ul>
       </div>
     </div>
     <div id="binoc-window" class="binoc-shadow-text">
       <div id="binoc-caption">
-        <h1>News and Updates<img src="https://binaryoutcast.com/base/skin/icons/projects-interlink.png" class="alignright" height="64px"/></h1>
-        <p>All the latest BinOC things!</p>
+        <h1>{xtplPageTitle}<img src="{xtplCompSkinPath}/icons/main/{xtplAppPath0}.png" class="alignright" height="64px"/></h1>
+        <p>{xtplPageTagline}</p>
         <!-- <p>The future ain't what it used to be. No matter, we shall continue regardless!</p> -->
       </div>
       <div id="binoc-client">
-        <div id="binoc-commandbar" style="display: none;">
+        <!--
+        <div id="binoc-commandbar">
           <ul>
             <li><a href="#">Project Overview</a></li>
             <li><a href="#">Release Notes</a></li>
@@ -478,34 +479,12 @@
             </li>
           </ul>
         </div>
+        -->
         <div id="binoc-body" class="fadeIn">
           <div id="binoc-content">
-            <h2>Heading 1</h2>
-            <p>
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque in feugiat turpis. Integer eu lacinia velit. Cras aliquam blandit suscipit. Nulla ullamcorper ex id ex tincidunt, a malesuada leo semper. Aliquam nec massa sodales, sagittis lacus et, eleifend diam. Ut viverra metus vitae lorem facilisis suscipit. Donec nec ligula eros. Duis in varius nibh.
-            </p>
-            <p>
-            Vivamus id feugiat justo. Donec vel turpis felis. Nunc venenatis laoreet sollicitudin. Nam congue nisl mauris, sit amet tincidunt ligula hendrerit vitae. Morbi sit amet euismod lectus. Ut at pretium dui, in hendrerit leo. Duis tincidunt tortor dui, et pharetra felis fringilla sit amet. Curabitur semper erat auctor, vulputate sem eget, pulvinar dui. Nunc id massa lacus.
-            </p>
-            <hr/>
-            <p>
-            <em>In molestie fermentum leo, ut malesuada lacus rutrum pretium. Nullam molestie libero nec pellentesque pellentesque. Orci varius natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Nunc hendrerit quam vitae interdum varius. Integer in molestie purus. Integer egestas, magna <a href="#">sed fermentum eleifend</a>, arcu lectus consectetur ipsum, in sagittis dolor nulla a turpis. Mauris sed augue dolor. Aenean eget porttitor dui. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Ut odio arcu, feugiat vitae felis a, finibus tincidunt diam. Aliquam erat volutpat. Nunc faucibus imperdiet ante ut scelerisque. Ut accumsan venenatis eleifend. Proin dictum, odio in aliquam sagittis, mauris dolor venenatis nisi, eu finibus ex ante id ante.</em>
-            </p>
-            <h3>Heading 2</h3>
-            <ul>
-              <li>Item 1</li>
-              <li>Item 2
-                <ul>
-                  <li>Sub-item 1</li>
-                </ul>
-              </li>
-              <li>Item 3</li>
-            </ul>
-            <p>
-            Suspendisse placerat elit nec efficitur scelerisque. Etiam ac mattis ex. Phasellus ut sapien feugiat, malesuada nisl elementum, consectetur magna. Mauris molestie, neque id aliquam aliquet, tellus arcu vehicula sapien, ut rutrum libero mi eget lectus. Etiam accumsan nisi sit amet urna elementum auctor. Morbi vulputate ullamcorper libero vitae euismod. Sed porta neque mi, vel convallis sapien accumsan id. Proin id nisi eu lacus scelerisque luctus in in odio. Cras vitae purus nec felis pharetra mattis. Etiam vehicula massa vitae neque egestas efficitur. Sed sodales libero nibh, vel sollicitudin nisl finibus vitae. Suspendisse malesuada ligula sed tortor elementum, id consectetur nibh pulvinar. Ut dignissim congue diam. Vivamus scelerisque diam ac neque porttitor, sit amet aliquam sem rutrum. Phasellus sed sem ut erat semper ullamcorper. Vivamus venenatis, nibh porta porttitor vulputate, justo libero gravida lectus, a fringilla metus orci nec nunc.
-            </p>
-
+            {xtplContentBody}
           </div>
+          <!--
           <div id="binoc-sidebar">
             <h3>Sidebar Header 1</h3>
             <ul>
@@ -519,11 +498,12 @@
               <li><img src="https://binaryoutcast.com/base/skin/icons/about.png" class="alignleft" height="16px" style="margin-top: 4px; margin-left: 0px; margin-right: 6px; border: 0;" /><a href="#">A Doodad</a></li>
             </ul>
           </div>
+          -->
         </div>
       </div>
     </div>
     <p id="binoc-copyright" class="binoc-shadow-text">
-      <small><strong>The Binary Outcast name, associated brands, styles, designs, artwork, and original content are Copyright &copy; 2001-2023 Matt A. Tobin - All rights reserved.</strong><br /> 
+      <small><strong>The Binary Outcast name, associated brands, styles, designs, artwork, and original content are Copyright &copy; 2001-{xtplCurrentYear} Matt A. Tobin - All rights reserved.</strong><br /> 
       Any other material is the intellectual property (such as copyright or trademark) of its respective owners.</small>   
     </p>
   </body>

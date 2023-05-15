@@ -4,61 +4,48 @@
 
 // == | Main | ========================================================================================================
 
-$ilFilesURL = 'https://projects.binaryoutcast.com/interlink/releases/latest/';
-$ilAddonsURL = 'https://interlink-addons.binaryoutcast.com/';
-$codeAtGithubURL = 'https://github.com/binaryoutcast/';
+function xGenerateAFuckinBinOCWebsite($aContent = null) {
+  $contentPath = gRegistry('app.componentPath') . kSlash . 'content';
+  $skinPath = gAppUtils::StripStr(gRegistry('app.componentPath'), kRootPath) . kSlash . 'skin';
+  $template = gReadFile(gBuildPath(kRootPath, $skinPath, 'template.html'));
 
-$menubar    = ['/updates/'              => 'Updates',
-               $ilFilesURL              => 'Interlink Mail Downloads',
-               $ilAddonsURL             => '& Add-ons',
-               $codeAtGithubURL         => 'Code @ Github',
-               '/about/'                => 'About'];
+  //$stylesheet = gReadFile(gBuildPath($skinPath, 'template.tpl'));
 
-$cmdbar     = ['/'                      => 'Home',
-               '/updates/'              => 'Updates',
-               '/about/'                => 'About'];
-
-gRegSet('console.content.menubar', $menubar);
-gRegSet('console.content.commandbar', $cmdbar);
-
-// --------------------------------------------------------------------------------------------------------------------
-
-function xGenerateAFuckinBinOCWebsite($aContent) {
-  $contentPath = gBuildPath(gRegistry('app.componentPath'), 'content');
-  $skinPath = gBuildPath(gRegistry('app.componentPath'), 'skin');
-  $template = gReadFile(gBuildPath($skinPath, 'template.tpl'));
-  $stylesheet = gReadFile(gBuildPath($skinPath, 'template.tpl'));
-
-  if (!$template) { gError('There is no template.'); }
+  if (!$template) { gError('There is no spoon.. I mean template.'); }
 
   $substs = array(
-    'xtplStyleSheet'      => $stylesheet ?? kEmptyString,
-    'xtplContentBody'     => $content ?? 'No content supplied.',
-    'xtplComnSkinPath'    => '/base/skin/',
-    'xtplCompSkinPath'    => $skinPath,
-    'xtplContentPath'     => $contentPath,
-    'xtplSiteName'        => SITE_NAME,
-    'xtplPageTitle'       => $this->contentURL == SLASH ? 'Front Page' : $title,
+  //'xtplStyleSheet'      => $stylesheet ?? kEmptyString,
+    'xtplContentBody'     => $aContent ?? 'No content supplied.',
+    'xtplComnSkinPath'    => '/base/skin',
+    'xtplCompSkinPath'    => gAppUtils::StripStr($skinPath, kRootPath),
+  //'xtplContentPath'     => gAppUtils::StripStr($contentPath, kRootPath),
+    'xtplSiteName'        => gGetConfig('console.content.siteName', kAppName),
+    'xtplAppPath0'        => gGetConfig('app.path.0', kEmptyString),
+    'xtplAppPath1'        => gGetConfig('app.path.1', kEmptyString),
+    'xtplAppPath2'        => gGetConfig('app.path.2', kEmptyString),
+    'xtplAppPath3'        => gGetConfig('app.path.3', kEmptyString),
+    'xtplPageTitle'       => (gGetConfig('app.path.0') == 'root') ? 'Welcome back to BinOC.. Again!' : gGetConfig('app.path.0'),
+    'xtplPageTagline'     => (gGetConfig('app.path.0') == 'root') ? 'Front Page (Home)' : 'No tagline supplied.',
     'xtplCurrentYear'     => date("Y"),
   );
+  
+  gOutput(gSubstEx($template, $substs), 'html');
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 
-gRegSet('console.content.siteName', 'BinOC Preview');
+gRegSet('console.content.siteName', 'Binary Outcast');
 
-switch (gRegistry('app.path.0')) {
+switch (gGetConfig('app.path.0')) {
   case 'projects':
-    (gRegistry('app.path.1') == 'interlink') ? gRedirect($ilFilesURL) : gRedirect($codeAtGithubURL);  
+    (gGetConfig('app.path.1') == 'interlink') ? gRedirect($ilFilesURL) : gRedirect($codeAtGithubURL);  
     break;
   case 'root':
-    gOutput(gReadFile(gBuildPath(kRootPath, 'components', 'site', 'content', 'splash.content')), 'html');
-    break;
+    //gOutput(gReadFile(gBuildPath(kRootPath, 'components', 'site', 'content', 'splash.content')), 'html');
+    //break;
   case 'updates':
-    gContent('BinOC Updates');
-    break;
   case 'about':
-    gContent('About BinOC');
+    xGenerateAFuckinBinOCWebsite();
     break;
   default:
     gRedirect('/updates/');
