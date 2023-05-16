@@ -4,14 +4,8 @@
 
 // == | Main | ========================================================================================================
 
-const kDisableSpecialComponent = true;
 gSetConfig('console.content.siteName', 'Binary Outcast');
 gRegisterIncludes('COMPONENTS', ['site']);
-gRegisterIncludes('MODULES', ['content']);
-gRegisterIncludes('LIBRARIES', array(
-  'markdown' => 'markdown/Markdown.inc.php',
-  'smarty' => 'smarty/Smarty.class.php',
-));
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -29,12 +23,12 @@ if (gGetConfig('app.offline', 'true')) {
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Fall through to utils loading the component which will be the Site component by default.
-
 // XXXTobin: This is temporary.
 if (gMetropolis::Component('aus')) {
   gConUtils::extensibleMarkup(gAppUtils::TAG_XML . kNewLine . kLessThan . 'updates' . kSlash . kGreaterThan, true);
 }
+
+// Fall through to utils loading the component which will be the Site component by default.
 
 // ====================================================================================================================
 

@@ -292,6 +292,9 @@
         to { opacity: 1; }
       }
 
+      .pulseText { animation: pulse 2000ms infinite; }
+      @keyframes pulse { 50% { color: red; } }
+
       /* ========================================================================== */
 
       .special-textbox {

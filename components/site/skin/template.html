@@ -413,6 +413,9 @@
         to { filter: hue-rotate(-360deg); }
       }
 
+      .pulseText { animation: pulse 2000ms infinite; }
+      @keyframes pulse { 50% { color: red; } }
+
       .clearfix:after {
           content: ".";
           display: block;
@@ -425,11 +428,11 @@
   <body>
     <div id="binoc-header">
       <div id="binoc-header-logo">
-        <a href="https://binaryoutcast.com/" title="The colors, Duke, the colors!"><img src="{xtplCompSkinPath}/binoc-logo.png" /></a>
+        <a href="/" title="The colors, Duke, the colors!"><img src="{xtplCompSkinPath}/binoc-logo.png" /></a>
       </div>
       <div id="binoc-header-menu" class="binoc-shadow-text">
         <ul>
-          <li><a href="/">Front Page (Home)</a></li>
+          <li><a href="/">Front Page <small>(Home)</small></a></li>
           <li><a href="/updates/">Updates</a></li>
           <li><a href="https://projects.binaryoutcast.com/interlink/releases/latest/"  target="_blank">Interlink Downloads</a></li>
           <li><a href="https://interlink-addons.binaryoutcast.com/"  target="_blank" style="padding-left: 0px !important; margin-left: -11px !important;" title="&amp; Knuckles">&amp; Add-ons</a></li>
@@ -447,8 +450,8 @@
     </div>
     <div id="binoc-window" class="binoc-shadow-text">
       <div id="binoc-caption">
-        <h1>{xtplPageTitle}<img src="{xtplCompSkinPath}/icons/main/{xtplAppPath0}.png" class="alignright" height="64px"/></h1>
-        <p>{xtplPageTagline}</p>
+        <h1>{xtplHeaderTitle}<img src="{xtplCompSkinPath}/icons/main/{xtplAppPath0}.png" class="alignright" height="64px"/></h1>
+        <p>{xtplHeaderTagline}</p>
         <!-- <p>The future ain't what it used to be. No matter, we shall continue regardless!</p> -->
       </div>
       <div id="binoc-client">
@@ -502,7 +505,7 @@
         </div>
       </div>
     </div>
-    <p id="binoc-copyright" class="binoc-shadow-text">
+    <p id="binoc-copyright" class="binoc-shadow-text fadeIn">
       <small><strong>The Binary Outcast name, associated brands, styles, designs, artwork, and original content are Copyright &copy; 2001-{xtplCurrentYear} Matt A. Tobin - All rights reserved.</strong><br /> 
       Any other material is the intellectual property (such as copyright or trademark) of its respective owners.</small>   
     </p>

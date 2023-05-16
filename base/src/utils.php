@@ -193,7 +193,7 @@ class gMetropolis {
 
     // Application
       function gError                       (...$args) { return gMetropolis::Error(...$args); }
-      function gNotFound                    (...$args) { return gMetropolis::gNotFound(...$args); }
+      function gNotFound                    (...$args) { return gMetropolis::NotFound(...$args); }
       function gReadFile                    (...$args) { return gMetropolis::ReadFile(...$args); }
       function gGetConfig                   (...$args) { return gMetropolis::GetConfig(...$args); }
       function gSetConfig                   (...$args) { return gMetropolis::SetConfig(...$args); }
@@ -629,7 +629,7 @@ class gMetropolis {
     foreach($aIncludes as $_key => $_value) { 
       switch ($aConst) {
         case 'COMPONENTS':
-          $includes[$_value] = gAppUtils::BuildPath(kRootPath, 'components', $_value, 'src', $_value . gAppUtils::FILE_EXT['php']);
+          $includes[$_value] = gAppUtils::BuildPath(kRootPath, 'components', $_value, 'src', 'main' . gAppUtils::FILE_EXT['php']);
           break;
         case 'MODULES':
           $includes[$_value] = gAppUtils::BuildPath(kRootPath, 'modules', $_value . gAppUtils::FILE_EXT['php']);
@@ -1098,23 +1098,23 @@ class gAppUtils {
 
 class gErrorUtils {
   const kPhpErrorCodes = array(
-    E_ERROR                   => 'PHP Error',
-    E_WARNING                 => 'PHP Warning',
-    E_PARSE                   => 'PHP Error (Parser)',
-    E_NOTICE                  => 'PHP Notice',
-    E_CORE_ERROR              => 'PHP Error (Core)',
-    E_CORE_WARNING            => 'PHP Warning (Core)',
-    E_COMPILE_ERROR           => 'PHP Error (Compiler)',
-    E_COMPILE_WARNING         => 'PHP Warning (Compiler)',
-    E_USER_ERROR              => 'PHP Error (Application)',
-    E_USER_WARNING            => 'PHP Warning (Application)',
-    E_USER_NOTICE             => 'PHP Notice (Application)',
-    E_STRICT                  => 'PHP Error (Strict)',
-    E_RECOVERABLE_ERROR       => 'PHP Error (Recoverable)',
-    E_DEPRECATED              => 'PHP Deprecation',
-    E_USER_DEPRECATED         => 'PHP Deprecation (Application)',
+    E_ERROR                   => 'System Error',
+    E_WARNING                 => 'System Warning',
+    E_PARSE                   => 'System Error (Parser)',
+    E_NOTICE                  => 'System Notice',
+    E_CORE_ERROR              => 'System Error (Core)',
+    E_CORE_WARNING            => 'System Warning (Core)',
+    E_COMPILE_ERROR           => 'System Error (Compiler)',
+    E_COMPILE_WARNING         => 'System Warning (Compiler)',
+    E_USER_ERROR              => 'System Error (Application)',
+    E_USER_WARNING            => 'System Warning (Application)',
+    E_USER_NOTICE             => 'System Notice (Application)',
+    E_STRICT                  => 'System Error (Strict)',
+    E_RECOVERABLE_ERROR       => 'System Error (Recoverable)',
+    E_DEPRECATED              => 'System Deprecation',
+    E_USER_DEPRECATED         => 'System Deprecation (Application)',
     E_ALL                     => 'Unable to Comply',
-    E_EXCEPTION               => 'PHP Exception',
+    E_EXCEPTION               => 'System Exception',
   );
 
   /******************************************************************************************************************
@@ -1151,16 +1151,16 @@ class gErrorUtils {
     $content = $aMetadata['message'];
 
     if (!SAPI_IS_CLI) {
-      $content = is_string($content) ?
-                 '<h2 style="display: block; border-bottom: 1px solid #d6e5f5; font-weight: bold;">Issue Details</h2>' .
-                 '<p>' . $content . '</p>':
-                 kEmptyString;
-
-      $content .= '<h3>Traceback:</h3><ul>';
+      $content = '<h2>Traceback</h2><ul>';
 
       foreach ($trace as $_value) {
-        $content .= '<li>' . $_value . '</li>';
+        $content .= '<li>' .  str_replace(kSlash, kDot, str_replace('.php', kEmptyString, ltrim($_value, kSlash))) . '</li>';
       }
+
+      $content .= '</ul>';
+      $content .= is_string($aMetadata['message']) ?
+                 '<hr /><p><strong>' . $aMetadata['message'] . '</strong></p>':
+                 kEmptyString;
 
       $commandBar = ['onclick="history.back()"' => 'Go Back'];
 
@@ -1172,7 +1172,7 @@ class gErrorUtils {
       }
 
       gMetropolis::SetConfig('console.content.sectionName', kEmptyString);
-      gConUtils::Content($content, ['title' => $title, 'statustext' => 'Please contact a system administrator.']);
+      gConUtils::Content($content, ['title' => $title, 'statustext' => '<span class="pulseText">Please contact a system administrator.</span>']);
     }
 
     gConUtils::Output(['title'=> $title, 'content' => ['errorMessage' => $content, 'traceback' => $trace]]);

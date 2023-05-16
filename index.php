@@ -11,6 +11,8 @@
 define('kRootPath', empty($_SERVER['DOCUMENT_ROOT']) ? __DIR__ : $_SERVER['DOCUMENT_ROOT']);
 
 const kDebugDomain = 'preview.binaryoutcast.com';
+const kAppName = 'Binary Outcast';
+const kAppVersion = '28.0.0pre';
 
 // Load fundamental utils
 require_once(kRootPath . '/base/src/utils.php');
