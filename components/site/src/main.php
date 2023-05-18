@@ -4,6 +4,10 @@
 
 // == | Main | ========================================================================================================
 
+$ilFilesURL = 'https://projects.binaryoutcast.com/interlink/releases/latest/';
+$ilAddonsURL = 'https://interlink-addons.binaryoutcast.com/';
+$codeAtGithubURL = 'https://github.com/binaryoutcast/';
+
 function xGenerateAFuckinBinOCWebsite($aContent = null, $aPageTitle = null, $aHeaderTitle = null, $aHeaderTagline = null) {
   $contentPath = gRegistry('app.componentPath') . kSlash . 'content';
   $skinPath = gAppUtils::StripStr(gRegistry('app.componentPath'), kRootPath) . kSlash . 'skin';
@@ -44,7 +48,7 @@ switch (gGetConfig('app.path.0')) {
     break;
   case 'updates':
     $content = kEmptyString;
-    $content .= '<h2>Stage 1 - There is a website again.<small class="alignright" style="font-weight: normal;">2023-05-17</small></h2>';
+    $content .= '<h2>Stage 1 - There is a website again.<small class="alignright" style="font-weight: normal;">2023-05-18</small></h2>';
     $content .= '<p><img src="/components/site/skin/splash/labcoat.png" class="alignright" title="The solution to a failed paradigm."/>I wish to give my deepest thanks to all those who are still happening by Binary Outcast. For doing so during the past year or must have been less than inspiring, to say the least. From my perspective, it has been very difficult indeed. However, we (and I do mean more than I), are <em>just about</em> back on track with a lot of the <strong>everything</strong> that we SHOULD have be known for all this time.</p>';
     $content .= '<p>Still, I also want to thank the tireless efforts of the contributors to MCP projects. The ones who have done nothing but work on code, help users, and otherwise just exist for the benefit of everyone, even us. These individuals are the ones to be celebrated even if they no longer feel the same in return. Please go forth and thank them even if you do not use either of our respective offerings.</p>';
     $content .= '<p>While one is doing the rounds one should also take the time to stop by the SeaMonkey Project and thank them. For a lot of their selective MozEvolution on the SM soft-fork platform DOES directly or indirectly benefit the broader <a href="http://thereisonlyxul.org/" target="_blank">MozFork Community</a>. It is also the place where I became interested in HOW Netscape and Classic Mozilla technology worked. Oh yeah, and it is the basis for a lot of the main code specifically used in our XUL Projects.</p>';
@@ -74,7 +78,7 @@ switch (gGetConfig('app.path.0')) {
     xGenerateAFuckinBinOCWebsite($content, null, 'The History of BinOC', 'From 2001 to Today');
     break;
   case 'root':
-    $content = '<h2>What\'s up?</h2><p><img src="/components/site/skin/splash/promo4.png" class="aligncenter" title="What? Were you expecting a big black monolith because of the copyright date?"></p><p style="text-align: center;"><strong>For 22 years, I <small>(Tobin)</small>, have been asking anyone and everyone to "Stay Tuned" to BinOC. Isn\'t about time we <em>actually</em> got started?</strong></p><hr /><p style="text-align: center;">Check out the <a href="/updates/">BinOC Updates</a> page for exciting <small>(and specific)</small> news!</p>';
+    $content = '<h2>What\'s up?</h2><p><img src="/components/site/skin/splash/promo4.png" class="aligncenter" title="What? Were you expecting a big black monolith because of the copyright date?"></p><p style="text-align: center;"><strong>For 22 years, I <small>(Tobin)</small>, have been asking anyone and everyone to "Stay Tuned" to BinOC. Isn\'t about time we <em>actually</em> got started?</strong></p><hr /><p style="text-align: center;">Check out the <a href="/updates/">BinOC Updates</a> page for exciting <small>(and specific)</small> news!<br /><small>Latest Site Update: 2023-05-18</small></p>';
     xGenerateAFuckinBinOCWebsite($content, 'Front Page (Home)', 'Welcome back to BinOC.. AGAIN!', 'Front Page <small>(Home)</small>');
     break;
   default:

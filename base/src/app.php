@@ -17,7 +17,7 @@ if (gGetConfig('app.offline', 'true')) {
     case 'aus':
       gConUtils::extensibleMarkup(gAppUtils::TAG_XML . kNewLine . kLessThan . 'updates' . kSlash . kGreaterThan, true);
       break;
-    default: gfError($content);
+    default: gError($content);
   }
 }
 
