@@ -1,0 +1,513 @@
+<html>
+  <head>
+    <title>{xtplPageTitle} - {xtplSiteName}</title>
+    <link rel="stylesheet" href="{xtplComnSkinPath}/webfonts/red-hat-font.css">
+    <style>
+      body {
+        margin: 0px;
+        /* background-color: #51667b; Mattcast Blue*/
+        background-color: #29456a;
+        /* background-image: linear-gradient(to bottom, #29456a 0%, #29456a 66%, #5e81a6 90%, #5b7ba2 100%); */
+        background-image: linear-gradient(to bottom, #29456a 0%, #29456a 50%, #5e81a6 100%);
+        background-repeat: no-repeat;
+        background-attachment: fixed;
+      }
+
+      body, td, th {
+        font-family: "RedHatText";
+        font-size: 12pt;
+        color: #000000;
+      }
+
+
+      a:link, a:visited {
+        color: #bebfc1;
+        text-decoration: underline dotted;
+        text-decoration-thickness: 1px;
+      }
+
+      a:active, a:focus {
+        text-decoration: underline;
+        color: #c78b94;
+      }
+      
+      a:hover {
+        text-decoration: underline;
+        color: #98aec6;
+      }
+
+      hr {
+        width: 50%;
+        border: none;
+        margin-top: 24px;
+        margin-bottom: 24px;
+        border-bottom: 1px solid #98aec6;
+        border-image: linear-gradient(to right, #98aec600 0%, #98aec6 50%, #98aec600 100%) 1;
+      }
+
+      .alignleft {
+        float: left;
+        text-align: left;
+        margin-right: 10px;
+      }
+
+      .alignright {
+        float: right;
+        text-align: right;
+        margin-left: 10px;
+      }
+
+      .aligncenter {
+        display:block;
+        margin-left:auto;
+        margin-right:auto;
+      }
+
+      h1, h2, h3 {
+        font-family: "RedHatDisplay";
+        line-height: 100%;
+        padding-bottom: 4px;
+        margin: 0.5em auto;
+      }
+
+      h1 {
+        font-size: 26pt;
+      }
+      
+      h2 {
+        border-bottom: 1px solid #98aec6;
+        border-image: linear-gradient(to right, #98aec6 0%, #98aec6 75%,#98aec600 100%) 1;
+      }
+
+      h2:first-of-type {
+        margin-top: 10px;
+      }
+
+      ul {
+        padding-left: 16px;
+        list-style-type: disc;
+      }
+
+      #binoc-header {
+        background-color: #202020;
+        background-image: linear-gradient(180deg,
+                                          rgba(0,0,0,0) 1px,
+                                          rgba(255,255,255,0.4) 1px,
+                                          rgba(255,255,255,0.1) 5px,
+                                          rgba(255,255,255,0.0) 6px,
+                                          rgba(255,255,255,0.0) 100%),
+                          linear-gradient(to bottom, #404040 0%, #202020 100%);
+        width: 100%;
+        min-width: 1200px;
+        height: 54px;
+        box-shadow: 0px 0px 8px rgba(0,0,0,0.66);
+        z-index: 999;
+        color: #fff;
+        font-family: "RedHatDisplay";
+      }
+
+      #binoc-header-logo {
+        width: 180px;
+        height: 32px;
+        float: left;
+        margin-top: 12px;
+        margin-left: 16px;
+      }
+
+      #binoc-header-logo > a > img:hover {
+        animation: technicolorHell 1.4s;
+        animation-delay: 0.2s;
+      }
+
+      #binoc-header-menu {
+        float: right;
+        margin: 0px;
+        padding-top: 0px;
+        font-size: 12pt;
+        color: #fff;
+      }
+
+      #binoc-header-menu > ul {
+        display: table;
+        margin: 0px;
+        padding: 0px;
+      }
+
+      #binoc-header-menu > ul > li {
+        float: left;
+        list-style: none;
+        margin-top: 15px;
+        margin-bottom: 0px;
+        padding-left: 8px;
+        padding-right: 8px;
+        padding-bottom: 2px;
+      }
+
+      #binoc-header-menu > ul:last-child {
+        padding-right: 16px;
+      }
+
+      #binoc-header-menu > ul > li > a,
+      #binoc-header-menu > ul > li > a:active,
+      #binoc-header-menu > ul > li > a:visited{
+        text-decoration: none;
+        color: #fff;
+      }
+
+      #binoc-header-menu > ul > li > a:hover {
+        color: #bebfc1;
+      }
+
+
+      @media all and (min-width: 1220px)  {
+        #binoc-window {
+          width: 1200px;
+        }
+      }
+
+      @media all and (min-width: 1540px) {
+        #binoc-window {
+          width: 1520px;
+        }
+      }
+
+      /*
+      @media all and (min-width: 1860px) {
+        #binoc-window {
+          width: 1840px;
+        }
+      }
+      */
+
+      #binoc-window {
+        min-width: 1200px;
+        max-width: 1840px;
+        margin: 0 auto;
+        padding: 0px;
+        transition: fade 0.4s;
+      }
+
+
+      #binoc-caption {
+        line-height: inital;
+        text-align: left;
+        color: #fff;
+        overflow-x: hidden;
+        margin: 0px;
+      }
+
+      #binoc-caption h1 {
+        border: none;
+        margin-bottom: -20px;
+      }
+
+      #binoc-caption p {
+        font-family: "RedHatText";
+        font-size: 14pt;
+        font-weight: normal;
+      }
+
+
+      #binoc-client {
+        margin-top: -6px;
+        overflow-x: hidden;
+        border-top: 1px solid #98aec6;
+        border-left: 1px solid #98aec6;
+        border-right: 1px solid #98aec6;
+        border-image: linear-gradient(to bottom, #98aec6 0px, #98aec600 360px) 1;
+      }
+
+      #binoc-client p {
+        line-height: 125%;
+      }
+
+      #binoc-commandbar {
+        height: 30px;
+        max-height: 30px;
+        background-color: #98aec6;
+        margin: 0px;
+        padding-top: 0px;
+        font-size: 10pt;
+        font-weight: bold;
+        color: #202020;
+        font-family: "RedHatDisplay";
+      }
+
+      #binoc-commandbar > ul {
+        display: table;
+        margin: 0px;
+        padding: 0px;
+      }
+
+      #binoc-commandbar > ul > li {
+        float: left;
+        list-style: none;
+        margin-top: 6px;
+        margin-left: 8px;
+        margin-bottom: 0px;
+      }
+
+      #binoc-commandbar ul > li > a,
+      #binoc-commandbar ul > li > a:active,
+      #binoc-commandbar ul > li > a:visited{
+        text-decoration: none;
+        text-shadow: 0px 1px 1px rgba(255,255,255,0.75);
+        color: #202020;
+      }
+
+      #binoc-commandbar ul > li > a {
+        padding-top: 2px;
+        padding-left: 8px;
+        padding-right: 8px;
+        padding-bottom: 1px;
+      }
+
+      #binoc-commandbar ul > li > a:hover {
+        color: #fff;
+        box-shadow: 0px 0px 1px rgba(0,0,0,1);
+        text-shadow: 0px 1px 1px rgba(0,0,0,0.75);
+        background-color: rgba(0,0,0,0.25);
+      }
+
+      #binoc-commandbar ul > li > a:active {
+        color: #fff;
+        box-shadow: 0px 0px 1px rgba(0,0,0,1);
+        text-shadow: 0px 1px 1px rgba(0,0,0,0.75);
+        background-color: rgba(0,0,0,0.50);        
+      }
+
+      #binoc-commandbar > ul > li > ul {
+        background-color: #98aec6;
+        color: #202020;
+        box-shadow: 0px 0px 1px rgba(0,0,0,1);
+        position: absolute;
+        padding: 0px;
+        margin-top: 1px;
+        display: none;
+        z-index: 1000;
+      }
+
+      #binoc-commandbar > ul > li:hover > ul {
+        display: block;
+      }
+
+      #binoc-commandbar > ul > li > ul > li,
+      #binoc-commandbar > ul > li > ul > li > a,
+      #binoc-commandbar > ul > li > ul > li > a:hover,
+      #binoc-commandbar > ul > li > ul > li > a:active,
+      #binoc-commandbar > ul > li > ul > li > a:visited {
+        margin: 0px;
+        padding: 0px;
+        border: none;
+        box-shadow: none;
+        background: none;
+      }
+
+      #binoc-commandbar > ul > li > ul > li {
+        list-style: none;
+        padding-top: 6px;
+        padding-left: 8px;
+        padding-right: 16px;
+        padding-bottom: 6px;
+      }
+
+      #binoc-commandbar > ul > li > ul > li:hover {
+        background-color: rgba(0,0,0,0.25);
+      }
+
+      #binoc-commandbar > ul > li > ul > li:not([noactivecolor="true"]):active {
+        background-color: rgba(0,0,0,0.50);
+      }
+
+      #binoc-commandbar > ul > li > ul > li:hover > a,
+      #binoc-commandbar > ul > li > ul > li:active > a {
+        color: #fff;
+        text-shadow: 0px 1px 1px rgba(0,0,0,0.75);
+      }
+
+      #binoc-body {
+        margin: 0px;
+        display: table;
+        width: 100%;
+        min-height: 480px;
+        height: 480px;
+      }
+
+      #binoc-content {
+        display: table-cell;
+        vertical-align: top;
+        overflow-wrap: break-word;
+        padding: 0px;
+        padding-left: 8px;
+        padding-right: 8px;
+        color: #fff;
+        
+      }
+
+      #binoc-sidebar {
+        display: table-cell;
+        vertical-align: top;
+        overflow-wrap: break-word;
+        border-left: 1px solid #98aec6;
+        border-image: linear-gradient(to bottom, #98aec6 0px, #98aec600 330px) 1;
+        min-height: 400px;
+        min-width: 220px;
+        max-width: 220px;
+        width: 220px;
+        color: fff;
+
+        padding-top: 4px;
+        padding-left: 8px;
+        padding-right: 8px;
+        padding-bottom: 8px;
+      }
+
+      #binoc-sidebar > h3 {
+        text-align: center;
+      }
+
+      #binoc-sidebar > ul {
+        list-style: none;
+        padding-left: 0px;
+      }
+
+      #binoc-sidebar > ul > li {
+        margin-bottom: 2px;
+      }
+
+      #binoc-sidebar > hr {
+        width: 100%;
+      }
+
+      #binoc-copyright {
+        margin: 0 auto;
+        font-size: 8pt;
+        line-height: inital;
+        margin-top: 24px;
+        margin-bottom: 24px;
+        padding-top: 8px;
+        padding-bottom: 8px;
+        width: 720px;
+        text-align: center;
+        font-family: "RedHatDisplay";
+        color: #fff;
+        border-top: 1px solid #98aec6;
+        border-bottom: 1px solid #98aec6;
+        border-image: linear-gradient(to right, #98aec600 0%, #98aec6 50%, #98aec600 100%) 1;
+      }
+
+      .binoc-shadow-text {
+        text-shadow: 0px 1px 1px rgba(0,0,0,0.85), 0px 1px 0px rgb(0,0,0);
+      }
+
+      .fadeIn {
+        animation: fade 0.4s;
+      }
+
+      @keyframes fade {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+
+      @keyframes technicolorHell {
+        to { filter: hue-rotate(-360deg); }
+      }
+
+      .pulseText { animation: pulse 2000ms infinite; }
+      @keyframes pulse { 50% { color: red; } }
+
+      .clearfix:after {
+          content: ".";
+          display: block;
+          height: 0;
+          clear: both;
+          visibility: hidden;
+          }
+    </style>
+  </head>
+  <body>
+    <div id="binoc-header">
+      <div id="binoc-header-logo">
+        <a href="/" title="The colors, Duke, the colors!"><img src="{xtplCompSkinPath}/binoc-logo.png" /></a>
+      </div>
+      <div id="binoc-header-menu" class="binoc-shadow-text">
+        <ul>
+          <li><a href="/">Front Page <small>(Home)</small></a></li>
+          <li><a href="/updates/">Updates</a></li>
+          <li><a href="https://projects.binaryoutcast.com/interlink/releases/latest/"  target="_blank">Interlink Downloads</a></li>
+          <li><a href="https://interlink-addons.binaryoutcast.com/"  target="_blank" style="padding-left: 0px !important; margin-left: -11px !important;" title="&amp; Knuckles">&amp; Add-ons</a></li>
+          <li><a href="https://github.com/binaryoutcast/" target="_blank">Code @ Github</a></li>
+          <!-- <li><a href="https://projects.binaryoutcast.com/">Projects</a></li> -->
+          <!-- <li><a href="https://code.binaryoutcast.com/">Code</a></li> -->
+          <!-- <li><a href="https://docs.binaryoutcast.com/">Docs</a></li> -->
+          <!-- <li><a href="https://files.binaryoutcast.com/">Files</a></li> -->
+          <!-- <li><a href="https://posts.binaryoutcast.com/">Posts</a></li> -->
+          <!-- <li><a href="https://chat.binaryoutcast.com/">Chat</a></li> -->
+          <!-- <li><a href="https://binocnetwork.com/">Network</a></li> -->
+          <li><a href="/about/">About</a></li>
+        </ul>
+      </div>
+    </div>
+    <div id="binoc-window" class="binoc-shadow-text">
+      <div id="binoc-caption">
+        <h1>{xtplHeaderTitle}<img src="{xtplCompSkinPath}/icons/main/{xtplAppPath0}.png" class="alignright" height="64px"/></h1>
+        <p>{xtplHeaderTagline}</p>
+        <!-- <p>The future ain't what it used to be. No matter, we shall continue regardless!</p> -->
+      </div>
+      <div id="binoc-client">
+        <!--
+        <div id="binoc-commandbar">
+          <ul>
+            <li><a href="#">Project Overview</a></li>
+            <li><a href="#">Release Notes</a></li>
+            <li><a href="#">Download</a></li>
+            <li><a href="#">Support</a></li>
+            <li><a href="javascript:void(0)">Add-ons <small>&#9698;</small></a>
+              <ul>
+                <li><a href="https://interlink-addons.binaryoutcast.com/extensions/" target="_blank">Extensions</a></li>
+                <li><a href="https://interlink-addons.binaryoutcast.com/themes/" target="_blank">Themes</a></li>
+                <li style="display: none;"><a href="#">Language Packs</a></li>
+                <li><a href="https://interlink-addons.binaryoutcast.com/dictionaries/" target="_blank">Spelling &amp; Dictionaries</a></li>
+                <li><a href="https://interlink-addons.binaryoutcast.com/search-plugins/" target="_blank">Open Search Plugins</a></li>
+                <li style="display: none;"><a href="#">User Scripts</a></li>
+                <li style="display: none;"><a href="#">User Styles</a></li>
+                <li><a href="https://interlink-addons.binaryoutcast.com/panel/" target="_blank"><small style="opacity: 0.75;">[Panel]</small> Submit/Manage</a></li>
+                <li noactivecolor="true">
+                  <form target="_blank" id="addonSearchForm" class="aligncenter" style="margin: 0px; margin-right: -8px; padding: 0px;" method="get" action="https://interlink-addons.binaryoutcast.com/search/">
+                    <input type="text" name="terms" style="max-width: 220px;" placeholder="Search add-ons&hellip;" maxlength="64" autocomplete="off">
+                    <input type="submit" value="Go">
+                  </form>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+        -->
+        <div id="binoc-body" class="fadeIn">
+          <div id="binoc-content">
+            {xtplContentBody}
+          </div>
+          <!--
+          <div id="binoc-sidebar">
+            <h3>Sidebar Header 1</h3>
+            <ul>
+              <li><img src="https://binaryoutcast.com/base/skin/icons/about.png" class="alignleft" height="16px" style="margin-top: 4px; margin-left: 0px; margin-right: 6px; border: 0;" />Some Thingy</li>
+              <li><img src="https://binaryoutcast.com/base/skin/icons/about.png" class="alignleft" height="16px" style="margin-top: 4px; margin-left: 0px; margin-right: 6px; border: 0;" /><a href="#">A Doodad</a></li>
+            </ul>
+            <hr />
+            <h3>Sidebar Header 2</h3>
+            <ul>
+              <li><img src="https://binaryoutcast.com/base/skin/icons/about.png" class="alignleft" height="16px" style="margin-top: 4px; margin-left: 0px; margin-right: 6px; border: 0;" />Some Thingy</li>
+              <li><img src="https://binaryoutcast.com/base/skin/icons/about.png" class="alignleft" height="16px" style="margin-top: 4px; margin-left: 0px; margin-right: 6px; border: 0;" /><a href="#">A Doodad</a></li>
+            </ul>
+          </div>
+          -->
+        </div>
+      </div>
+    </div>
+    <p id="binoc-copyright" class="binoc-shadow-text fadeIn">
+      <small><strong>The Binary Outcast name, associated brands, styles, designs, artwork, and original content are Copyright &copy; 2001-{xtplCurrentYear} Matt A. Tobin - All rights reserved.</strong><br /> 
+      Any other material is the intellectual property (such as copyright or trademark) of its respective owners.</small>   
+    </p>
+  </body>
+</html>
